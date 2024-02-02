@@ -23,9 +23,6 @@ namespace GymDBAccess.DataAccess
 		public DbSet<Payment> Payments { get; set; }
 		
 		public DbSet<Chip> Chips { get; set; }
-		
-		public DbSet<GymAccessRecord> GymAccessRecords { get; set; }
-
 
 	}
 }
