@@ -3,6 +3,7 @@ using GymDBAccess.Models;
 using GymDBAccess.Services.Interfaces;
 using System.Collections.Generic;
 using System.Threading.Tasks;
+using GymDBAccess.DTOs;
 
 namespace GymDBAccess.Controllers
 {
@@ -70,6 +71,30 @@ namespace GymDBAccess.Controllers
 
 			await _membershipService.DeleteMembershipAsnyc(id);
 			return NoContent();
+		}
+
+		// GET: api/Memberships/active
+		[HttpGet("active")]
+		public async Task<ActionResult<IEnumerable<ActiveMembershipDTO>>> GetActiveMemberships()
+		{
+			var activeMemberships = await _membershipService.GetActiveMembershipsAsync();
+			if (activeMemberships == null)
+			{
+				return NotFound();
+			}
+			return Ok(activeMemberships);
+		}
+
+		// GET: api/Memberships/inactive
+		[HttpGet("inactive")]
+		public async Task<ActionResult<IEnumerable<InactiveMembershipDTO>>> GetInactiveMemberships()
+		{
+			var inactiveMemberships = await _membershipService.GetInactiveMembershipsAsync();
+			if (inactiveMemberships == null)
+			{
+				return NotFound();
+			}
+			return Ok(inactiveMemberships);
 		}
 	}
 }
