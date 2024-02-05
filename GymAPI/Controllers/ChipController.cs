@@ -3,9 +3,11 @@ using GymDBAccess.Models;
 using GymDBAccess.Services.Interfaces;
 using System.Collections.Generic;
 using System.Threading.Tasks;
+using Microsoft.AspNetCore.Authorization;
 
 namespace GymDBAccess.Controllers
 {
+	[Authorize]
 	[ApiController]
 	[Route("api/[controller]")]
 	public class ChipsController : ControllerBase

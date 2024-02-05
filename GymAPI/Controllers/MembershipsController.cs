@@ -4,9 +4,11 @@ using GymDBAccess.Services.Interfaces;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using GymDBAccess.DTOs;
+using Microsoft.AspNetCore.Authorization;
 
 namespace GymDBAccess.Controllers
 {
+	[Authorize]
 	[ApiController]
 	[Route("api/[controller]")]
 	public class MembershipsController : ControllerBase
