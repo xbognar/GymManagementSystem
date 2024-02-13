@@ -7,9 +7,13 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "GymAPI", "src\GymAPI\GymAPI
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "GymDBAccess", "src\GymDBAccess\GymDBAccess.csproj", "{FBB9AF48-3067-4CE9-8319-C2EBC3F3E83D}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "GymAPI.Tests", "tests\GymAPI.Tests\GymAPI.Tests.csproj", "{3289AD1C-C33A-42D2-BBB8-0A9E4310B7E4}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "GymAPI.Tests", "tests\GymAPI.Tests\GymAPI.Tests.csproj", "{3289AD1C-C33A-42D2-BBB8-0A9E4310B7E4}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "GymDBAccess.Tests", "tests\GymDBAccess.Tests\GymDBAccess.Tests.csproj", "{50CE99C0-D460-40A0-B6E0-5B06C5CBCFB9}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "GymDBAccess.Tests", "tests\GymDBAccess.Tests\GymDBAccess.Tests.csproj", "{50CE99C0-D460-40A0-B6E0-5B06C5CBCFB9}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "src", "src", "{47A4B03E-B47C-4402-B796-C2B26FD1B600}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "tests", "tests", "{1D3B4EFB-2330-4C9D-ACD3-739E9057C8E4}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -36,6 +40,12 @@ Global
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(NestedProjects) = preSolution
+		{D7F61512-6648-4B66-8900-B76F49086C38} = {47A4B03E-B47C-4402-B796-C2B26FD1B600}
+		{FBB9AF48-3067-4CE9-8319-C2EBC3F3E83D} = {47A4B03E-B47C-4402-B796-C2B26FD1B600}
+		{3289AD1C-C33A-42D2-BBB8-0A9E4310B7E4} = {1D3B4EFB-2330-4C9D-ACD3-739E9057C8E4}
+		{50CE99C0-D460-40A0-B6E0-5B06C5CBCFB9} = {1D3B4EFB-2330-4C9D-ACD3-739E9057C8E4}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {F094AD94-2241-4ACE-B62C-E7F7D7F001DD}
