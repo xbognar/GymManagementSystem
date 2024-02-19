@@ -1,0 +1,29 @@
+version: '3.8'
+
+services:
+  api:
+    image: xbognar/gymapi:1.0.0
+    build:
+      context: .
+      dockerfile: Dockerfile
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Production
+      - CONNECTION_STRING=Server=db;Database=GymDatabase;User Id=sa;Password=TomiFit123;
+      - JWT_KEY=8Zz5tw0Ionm3XPZZfN0NOmAHsUBT8E8Ff6a2
+      - LOGIN_USERNAME=RozsaTomi
+      - LOGIN_PASSWORD=TomiFit123
+    ports:
+      - "80:8080" 
+    depends_on:
+      - db
+
+  db:
+    image: mcr.microsoft.com/mssql/server:2019-latest
+    environment:
+      SA_PASSWORD: "TomiFit123"
+      ACCEPT_EULA: "Y"
+    volumes:
+      - db_data:/var/opt/mssql
+
+volumes:
+  db_data:
