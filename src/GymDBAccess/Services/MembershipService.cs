@@ -67,7 +67,7 @@ namespace GymDBAccess.Services
 						MemberName = member.FirstName + " " + member.LastName,
 						StartDate = membership.StartDate,
 						EndDate = membership.EndDate,
-						Type = membership.Type
+						Type = membership.PaymentType
 					})
 				.ToListAsync();
 		}
@@ -85,9 +85,23 @@ namespace GymDBAccess.Services
 						MemberName = member.FirstName + " " + member.LastName,
 						StartDate = membership.StartDate,
 						EndDate = membership.EndDate,
-						Type = membership.Type
+						Type = membership.PaymentType
 					})
 				.ToListAsync();
+		}
+
+		public async Task<IEnumerable<UserMembershipsDTO>> GetUserMembershipsAsync(int memberId)
+		{
+			return await _context.Memberships
+								 .Where(m => m.MemberID == memberId)
+								 .Select(m => new UserMembershipsDTO
+								 {
+									 MembershipID = m.MembershipID,
+									 StartDate = m.StartDate,
+									 EndDate = m.EndDate,
+									 PaymentType = m.PaymentType 
+								 })
+								 .ToListAsync();
 		}
 
 

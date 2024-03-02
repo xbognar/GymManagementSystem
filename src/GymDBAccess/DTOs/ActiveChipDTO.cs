@@ -4,18 +4,16 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace GymDBAccess.Models
+namespace GymDBAccess.DTOs
 {
-	public class Chip
+	public class ActiveChipDTO
 	{
 
 		public int ChipID { get; set; }
 		
-		public int MemberID { get; set; }
-
+		public string? OwnerFullName { get; set; }
+		
 		public string? ChipInfo { get; set; }
-
-		public bool IsActive { get; set; }
 
 	}
 }

@@ -73,5 +73,20 @@ namespace GymDBAccess.Controllers
 			await _memberService.DeleteMemberAsync(id);
 			return NoContent();
 		}
+
+		// GET: api/Members/getMemberIdByName
+		[HttpGet("getMemberIdByName")]
+		public async Task<ActionResult<int>> GetMemberIdByName(string fullName)
+		{
+			var memberId = await _memberService.GetMemberIdByNameAsync(fullName);
+
+			if (!memberId.HasValue)
+			{
+				return NotFound("Member not found or full name format is incorrect.");
+			}
+
+			return Ok(memberId.Value);
+		}
+
 	}
 }

@@ -6,16 +6,10 @@ using System.Threading.Tasks;
 
 namespace GymDBAccess.Models
 {
-	public class Chip
+	public class ChipUpdateRequest
 	{
-
 		public int ChipID { get; set; }
 		
-		public int MemberID { get; set; }
-
-		public string? ChipInfo { get; set; }
-
-		public bool IsActive { get; set; }
-
+		public int NewMemberID { get; set; }
 	}
 }

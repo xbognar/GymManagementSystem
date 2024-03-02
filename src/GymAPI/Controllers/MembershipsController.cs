@@ -98,5 +98,18 @@ namespace GymDBAccess.Controllers
 			}
 			return Ok(inactiveMemberships);
 		}
+		
+		// GET: api/Memberships/user/{memberId}/memberships
+		[HttpGet("user/{memberId}/memberships")]
+		public async Task<ActionResult<IEnumerable<UserMembershipsDTO>>> GetUserMemberships(int memberId)
+		{
+			var memberships = await _membershipService.GetUserMembershipsAsync(memberId);
+			if (memberships == null || !memberships.Any())
+			{
+				return NotFound();
+			}
+			return Ok(memberships);
+		}
+
 	}
 }

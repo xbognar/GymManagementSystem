@@ -49,15 +49,24 @@ namespace GymDBAccess.Controllers
 
 		// PUT: api/Chips/{id}
 		[HttpPut("{id}")]
-		public async Task<IActionResult> UpdateChip(int id, [FromBody] Chip chip)
+		public async Task<IActionResult> UpdateChip(int id, [FromBody] ChipUpdateRequest request)
 		{
-			if (id != chip.ChipID)
+			if (id != request.ChipID)
 			{
-				return BadRequest();
+				return BadRequest("Chip ID does not match the route ID.");
 			}
 
+			var chip = await _chipService.GetChipByIdAsync(id);
+			if (chip == null)
+			{
+				return NotFound();
+			}
+
+			chip.MemberID = request.NewMemberID;
+												 
 			await _chipService.UpdateChipAsync(chip);
-			return NoContent();
+			return Ok(chip);
+
 		}
 
 		// DELETE: api/Chips/{id}
@@ -73,5 +82,37 @@ namespace GymDBAccess.Controllers
 			await _chipService.DeleteChipAsync(id);
 			return NoContent();
 		}
+
+		// GET: api/Chips/active
+		[HttpGet("active")]
+		public async Task<IActionResult> GetActiveChips()
+		{
+			var chips = await _chipService.GetActiveChipsAsync();
+			return Ok(chips);
+		}
+
+		// GET: api/Chips/inactive
+		[HttpGet("inactive")]
+		public async Task<IActionResult> GetInactiveChips()
+		{
+			var chips = await _chipService.GetInactiveChipsAsync();
+			return Ok(chips);
+		}
+
+		// GET: api/Chips/infoByMember/{memberId}
+		[HttpGet("infoByMember/{memberId}")]
+		public async Task<ActionResult<string>> GetChipInfoByMemberId(int memberId)
+		{
+			var chipInfo = await _chipService.GetChipInfoByMemberIdAsync(memberId);
+
+			if (chipInfo == null)
+			{
+				return NotFound($"No chip found for member with ID {memberId}.");
+			}
+
+			return Ok(chipInfo);
+		}
+
+
 	}
 }

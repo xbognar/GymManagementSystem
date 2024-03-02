@@ -22,8 +22,8 @@ public class ChipServiceTests : IDisposable
 		_chipService = new ChipService(_context);
 
 		// Seed the database with some test chips
-		_context.Chips.Add(new Chip { ChipID = 1, MemberID = 1, IssueDate = DateTime.Now.AddDays(-10), IsActive = true });
-		_context.Chips.Add(new Chip { ChipID = 2, MemberID = 2, IssueDate = DateTime.Now.AddDays(-5), IsActive = false });
+		_context.Chips.Add(new Chip { ChipID = 1, MemberID = 1, ChipInfo = "Test Chip 1 Info", IsActive = true });
+		_context.Chips.Add(new Chip { ChipID = 2, MemberID = 2, ChipInfo = "Test Chip 2 Info", IsActive = false });
 		_context.SaveChanges();
 	}
 
@@ -36,6 +36,7 @@ public class ChipServiceTests : IDisposable
 		// Assert
 		Assert.NotNull(result);
 		Assert.True(result.IsActive);
+		Assert.Equal("Test Chip 1 Info", result.ChipInfo);
 		Assert.Equal(1, result.MemberID);
 	}
 
@@ -54,7 +55,7 @@ public class ChipServiceTests : IDisposable
 	public async Task AddChipAsync_AddsChip()
 	{
 		// Arrange
-		var newChip = new Chip { ChipID = 3, MemberID = 3, IssueDate = DateTime.Now, IsActive = true };
+		var newChip = new Chip { ChipID = 3, MemberID = 3, ChipInfo = "New Chip Info", IsActive = true };
 
 		// Act
 		await _chipService.AddChipAsync(newChip);
@@ -63,6 +64,7 @@ public class ChipServiceTests : IDisposable
 		// Assert
 		Assert.NotNull(addedChip);
 		Assert.True(addedChip.IsActive);
+		Assert.Equal("New Chip Info", addedChip.ChipInfo);
 		Assert.Equal(3, addedChip.MemberID);
 	}
 
@@ -71,7 +73,7 @@ public class ChipServiceTests : IDisposable
 	{
 		// Arrange
 		var chipToUpdate = await _context.Chips.FindAsync(1);
-		chipToUpdate.IsActive = false;
+		chipToUpdate.ChipInfo = "Updated Chip Info";
 
 		// Act
 		await _chipService.UpdateChipAsync(chipToUpdate);
@@ -79,7 +81,7 @@ public class ChipServiceTests : IDisposable
 
 		// Assert
 		Assert.NotNull(updatedChip);
-		Assert.False(updatedChip.IsActive);
+		Assert.Equal("Updated Chip Info", updatedChip.ChipInfo);
 	}
 
 	[Fact]

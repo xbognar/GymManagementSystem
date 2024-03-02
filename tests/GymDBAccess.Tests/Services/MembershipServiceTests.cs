@@ -45,7 +45,7 @@ public class MembershipServiceTests : IDisposable
 			MemberID = 1,
 			StartDate = DateTime.Now.AddMonths(-6),
 			EndDate = DateTime.Now.AddMonths(6),
-			Type = "Annual",
+			PaymentType = "Annual",
 			IsActive = true
 		});
 		_context.Memberships.Add(new Membership
@@ -54,7 +54,7 @@ public class MembershipServiceTests : IDisposable
 			MemberID = 2,
 			StartDate = DateTime.Now.AddMonths(-12),
 			EndDate = DateTime.Now.AddMonths(-1),
-			Type = "Annual",
+			PaymentType = "Annual",
 			IsActive = false
 		});
 
@@ -69,7 +69,7 @@ public class MembershipServiceTests : IDisposable
 
 		// Assert
 		Assert.NotNull(result);
-		Assert.Equal("Annual", result.Type);
+		Assert.Equal("Annual", result.PaymentType);
 		Assert.True(result.IsActive);
 	}
 
@@ -88,7 +88,7 @@ public class MembershipServiceTests : IDisposable
 	public async Task AddMembershipAsync_AddsMembership()
 	{
 		// Arrange
-		var newMembership = new Membership { MembershipID = 3, MemberID = 3, StartDate = DateTime.Now, EndDate = DateTime.Now.AddYears(1), Type = "Monthly", IsActive = true };
+		var newMembership = new Membership { MembershipID = 3, MemberID = 3, StartDate = DateTime.Now, EndDate = DateTime.Now.AddYears(1), PaymentType = "Monthly", IsActive = true };
 
 		// Act
 		await _membershipService.AddMembershipAsync(newMembership);
@@ -96,7 +96,7 @@ public class MembershipServiceTests : IDisposable
 
 		// Assert
 		Assert.NotNull(addedMembership);
-		Assert.Equal("Monthly", addedMembership.Type);
+		Assert.Equal("Monthly", addedMembership.PaymentType);
 		Assert.True(addedMembership.IsActive);
 	}
 
@@ -105,7 +105,7 @@ public class MembershipServiceTests : IDisposable
 	{
 		// Arrange
 		var membershipToUpdate = await _context.Memberships.FindAsync(1);
-		membershipToUpdate.Type = "Monthly";
+		membershipToUpdate.PaymentType = "Monthly";
 
 		// Act
 		await _membershipService.UpdateMembershipAsync(membershipToUpdate);
@@ -113,7 +113,7 @@ public class MembershipServiceTests : IDisposable
 
 		// Assert
 		Assert.NotNull(updatedMembership);
-		Assert.Equal("Monthly", updatedMembership.Type);
+		Assert.Equal("Monthly", updatedMembership.PaymentType);
 	}
 
 	[Fact]

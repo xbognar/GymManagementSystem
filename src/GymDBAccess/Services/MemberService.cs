@@ -53,5 +53,23 @@ namespace GymDBAccess.Services
 			}
 		}
 
+		public async Task<int?> GetMemberIdByNameAsync(string fullName)
+		{
+			var names = fullName.Split(' ');
+			if (names.Length < 2)
+			{
+				return null; 
+			}
+
+			var firstName = names[0];
+			var lastName = names[names.Length - 1];
+
+			var member = await _context.Members
+									   .FirstOrDefaultAsync(m => m.FirstName == firstName && m.LastName == lastName);
+
+			return member?.MemberID;
+		}
+
+
 	}
 }

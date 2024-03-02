@@ -93,7 +93,6 @@ builder.Services.AddDbContext<ApplicationDbContext>(options =>
 // Dependency Injections
 builder.Services.AddScoped<IMemberService, MemberService>();
 builder.Services.AddScoped<IMembershipService, MembershipService>();
-builder.Services.AddScoped<IPaymentService, PaymentService>();
 builder.Services.AddScoped<IChipService, ChipService>();
 
 // JWT Authentication using an environment variable for the key
@@ -122,6 +121,14 @@ builder.Services.AddAuthentication(x =>
 builder.Services.AddSingleton<IJwtService, JwtService>();
 
 var app = builder.Build();
+
+// Automatically apply migrations
+using (var scope = app.Services.CreateScope())
+{
+	var services = scope.ServiceProvider;
+	var dbContext = services.GetRequiredService<ApplicationDbContext>();
+	dbContext.Database.Migrate();
+}
 
 // Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())

@@ -15,5 +15,7 @@ namespace GymDBAccess.Services.Interfaces
 
         Task DeleteMemberAsync(int id);
 
-    }
+        Task<int?> GetMemberIdByNameAsync(string fullName);
+
+	}
 }

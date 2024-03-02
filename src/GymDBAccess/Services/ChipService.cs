@@ -1,4 +1,5 @@
 ﻿using GymDBAccess.DataAccess;
+using GymDBAccess.DTOs;
 using GymDBAccess.Models;
 using GymDBAccess.Services.Interfaces;
 using Microsoft.EntityFrameworkCore;
@@ -50,5 +51,46 @@ namespace GymDBAccess.Services
 				await _context.SaveChangesAsync();
 			}
 		}
+
+		public async Task<IEnumerable<ActiveChipDTO>> GetActiveChipsAsync()
+		{
+			return await _context.Chips
+				.Where(c => c.IsActive)
+				.Join(_context.Members,
+					chip => chip.MemberID,
+					member => member.MemberID,
+					(chip, member) => new ActiveChipDTO
+					{
+						ChipID = chip.ChipID,
+						OwnerFullName = $"{member.FirstName} {member.LastName}",
+						ChipInfo = chip.ChipInfo
+					})
+				.ToListAsync();
+		}
+
+		public async Task<IEnumerable<InactiveChipDTO>> GetInactiveChipsAsync()
+		{
+			return await _context.Chips
+				.Where(c => !c.IsActive)
+				.Join(_context.Members,
+					chip => chip.MemberID,
+					member => member.MemberID,
+					(chip, member) => new InactiveChipDTO
+					{
+						ChipID = chip.ChipID,
+						OwnerFullName = $"{member.FirstName} {member.LastName}",
+						ChipInfo = chip.ChipInfo
+					})
+				.ToListAsync();
+		}
+
+		public async Task<string> GetChipInfoByMemberIdAsync(int memberId)
+		{
+			var chip = await _context.Chips
+									 .FirstOrDefaultAsync(c => c.MemberID == memberId);
+
+			return chip?.ChipInfo;
+		}
+
 	}
 }

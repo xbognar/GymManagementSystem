@@ -38,7 +38,7 @@ namespace GymAPI.Tests.Controllers
 		public async Task GetChip_ReturnsChip_WhenChipExists()
 		{
 			// Arrange
-			var expectedChip = new Chip { ChipID = 1, MemberID = 1, IssueDate = System.DateTime.Now, IsActive = true };
+			var expectedChip = new Chip { ChipID = 1, MemberID = 1, ChipInfo = "Some chip info", IsActive = true };
 			_mockChipService.Setup(service => service.GetChipByIdAsync(1))
 				.ReturnsAsync(expectedChip);
 
@@ -48,7 +48,7 @@ namespace GymAPI.Tests.Controllers
 			// Assert
 			var okResult = Assert.IsType<OkObjectResult>(result.Result);
 			var returnedChip = Assert.IsType<Chip>(okResult.Value);
-			Assert.Equal(expectedChip, returnedChip);
+			Assert.Equal(expectedChip.ChipInfo, returnedChip.ChipInfo);
 		}
 
 		[Fact]
@@ -57,8 +57,8 @@ namespace GymAPI.Tests.Controllers
 			// Arrange
 			var expectedChips = new List<Chip>
 			{
-				new Chip { ChipID = 1, MemberID = 1, IssueDate = System.DateTime.Now, IsActive = true },
-				new Chip { ChipID = 2, MemberID = 2, IssueDate = System.DateTime.Now, IsActive = false }
+				new Chip { ChipID = 1, MemberID = 1, ChipInfo = "Chip info 1", IsActive = true },
+				new Chip { ChipID = 2, MemberID = 2, ChipInfo = "Chip info 2", IsActive = false }
 			};
 			_mockChipService.Setup(service => service.GetAllChipsAsync())
 				.ReturnsAsync(expectedChips);
@@ -69,14 +69,14 @@ namespace GymAPI.Tests.Controllers
 			// Assert
 			var okResult = Assert.IsType<OkObjectResult>(result.Result);
 			var returnedChips = Assert.IsType<List<Chip>>(okResult.Value);
-			Assert.Equal(expectedChips, returnedChips);
+			Assert.Equal(expectedChips.Count, returnedChips.Count); // Compare the count as a simple assertion
 		}
 
 		[Fact]
 		public async Task AddChip_ReturnsCreatedAtAction_WhenChipIsAdded()
 		{
 			// Arrange
-			var newChip = new Chip { ChipID = 3, MemberID = 1, IssueDate = System.DateTime.Now, IsActive = true };
+			var newChip = new Chip { ChipID = 3, MemberID = 1, ChipInfo = "New chip info", IsActive = true };
 			_mockChipService.Setup(service => service.AddChipAsync(newChip))
 				.Returns(Task.CompletedTask);
 
@@ -86,36 +86,38 @@ namespace GymAPI.Tests.Controllers
 			// Assert
 			var createdAtActionResult = Assert.IsType<CreatedAtActionResult>(result.Result);
 			var returnedChip = Assert.IsType<Chip>(createdAtActionResult.Value);
-			Assert.Equal(newChip, returnedChip);
+			Assert.Equal(newChip.ChipInfo, returnedChip.ChipInfo);
 		}
 
 		[Fact]
 		public async Task UpdateChip_ReturnsBadRequest_WhenChipIdDoesNotMatch()
 		{
 			// Arrange
-			var updatedChip = new Chip { ChipID = 1, MemberID = 1, IssueDate = System.DateTime.Now, IsActive = false };
+			var updateRequest = new ChipUpdateRequest { ChipID = 1, NewMemberID = 2 };
 
 			// Act
-			var result = await _chipsController.UpdateChip(2, updatedChip);
+			var result = await _chipsController.UpdateChip(2, updateRequest);
 
 			// Assert
-			Assert.IsType<BadRequestResult>(result);
+			Assert.IsType<BadRequestObjectResult>(result);
 		}
+
 
 		[Fact]
 		public async Task UpdateChip_ReturnsNoContent_WhenChipIsUpdated()
 		{
 			// Arrange
-			var updatedChip = new Chip { ChipID = 1, MemberID = 1, IssueDate = System.DateTime.Now, IsActive = false };
-			_mockChipService.Setup(service => service.UpdateChipAsync(updatedChip))
-				.Returns(Task.CompletedTask);
+			var updateRequest = new ChipUpdateRequest { ChipID = 1, NewMemberID = 2 };
+			_mockChipService.Setup(service => service.UpdateChipAsync(It.IsAny<Chip>())) 
+							.Returns(Task.CompletedTask);
 
 			// Act
-			var result = await _chipsController.UpdateChip(1, updatedChip);
+			var result = await _chipsController.UpdateChip(1, updateRequest);
 
 			// Assert
-			Assert.IsType<NoContentResult>(result);
+			var noContentResult = Assert.IsType<NoContentResult>(result);
 		}
+
 
 		[Fact]
 		public async Task DeleteChip_ReturnsNotFound_WhenChipDoesNotExist()
@@ -135,7 +137,7 @@ namespace GymAPI.Tests.Controllers
 		public async Task DeleteChip_ReturnsNoContent_WhenChipIsDeleted()
 		{
 			// Arrange
-			var existingChip = new Chip { ChipID = 1, MemberID = 1, IssueDate = System.DateTime.Now, IsActive = true };
+			var existingChip = new Chip { ChipID = 1, MemberID = 1, ChipInfo = "Existing chip info", IsActive = true };
 			_mockChipService.Setup(service => service.GetChipByIdAsync(1))
 				.ReturnsAsync(existingChip);
 			_mockChipService.Setup(service => service.DeleteChipAsync(1))

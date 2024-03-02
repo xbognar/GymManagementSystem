@@ -18,5 +18,7 @@ namespace GymDBAccess.Services.Interfaces
 		Task<IEnumerable<ActiveMembershipDTO>> GetActiveMembershipsAsync();
 		
 		Task<IEnumerable<InactiveMembershipDTO>> GetInactiveMembershipsAsync();
+
+		Task<IEnumerable<UserMembershipsDTO>> GetUserMembershipsAsync(int memberId);
 	}
 }

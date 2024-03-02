@@ -39,7 +39,7 @@ namespace GymAPI.Tests.Controllers
 		public async Task GetMembership_ReturnsMembership_WhenMembershipExists()
 		{
 			// Arrange
-			var expectedMembership = new Membership { MembershipID = 1, MemberID = 1, StartDate = System.DateTime.Now, EndDate = System.DateTime.Now.AddYears(1), Type = "Annual", IsActive = true };
+			var expectedMembership = new Membership { MembershipID = 1, MemberID = 1, StartDate = System.DateTime.Now, EndDate = System.DateTime.Now.AddYears(1), PaymentType = "Annual", IsActive = true };
 			_mockMembershipService.Setup(service => service.GetMembershipByIdAsync(1))
 				.ReturnsAsync(expectedMembership);
 
@@ -56,7 +56,7 @@ namespace GymAPI.Tests.Controllers
 		public async Task AddMembership_ReturnsCreatedAtAction_WhenMembershipIsAdded()
 		{
 			// Arrange
-			var newMembership = new Membership { MembershipID = 3, MemberID = 3, StartDate = System.DateTime.Now, EndDate = System.DateTime.Now.AddYears(1), Type = "Monthly", IsActive = true };
+			var newMembership = new Membership { MembershipID = 3, MemberID = 3, StartDate = System.DateTime.Now, EndDate = System.DateTime.Now.AddYears(1), PaymentType = "Monthly", IsActive = true };
 			_mockMembershipService.Setup(service => service.AddMembershipAsync(newMembership))
 				.Returns(Task.CompletedTask);
 
@@ -74,7 +74,7 @@ namespace GymAPI.Tests.Controllers
 		public async Task UpdateMembership_ReturnsBadRequest_WhenMembershipIdDoesNotMatch()
 		{
 			// Arrange
-			var updatedMembership = new Membership { MembershipID = 1, MemberID = 1, StartDate = System.DateTime.Now, EndDate = System.DateTime.Now.AddYears(1), Type = "Monthly", IsActive = false };
+			var updatedMembership = new Membership { MembershipID = 1, MemberID = 1, StartDate = System.DateTime.Now, EndDate = System.DateTime.Now.AddYears(1), PaymentType = "Monthly", IsActive = false };
 
 			// Act
 			var result = await _membershipsController.UpdateMembership(2, updatedMembership);
@@ -87,7 +87,7 @@ namespace GymAPI.Tests.Controllers
 		public async Task UpdateMembership_ReturnsNoContent_WhenMembershipIsUpdated()
 		{
 			// Arrange
-			var updatedMembership = new Membership { MembershipID = 1, MemberID = 1, StartDate = System.DateTime.Now, EndDate = System.DateTime.Now.AddYears(1), Type = "Monthly", IsActive = false };
+			var updatedMembership = new Membership { MembershipID = 1, MemberID = 1, StartDate = System.DateTime.Now, EndDate = System.DateTime.Now.AddYears(1), PaymentType = "Monthly", IsActive = false };
 			_mockMembershipService.Setup(service => service.UpdateMembershipAsync(updatedMembership))
 				.Returns(Task.CompletedTask);
 
@@ -116,7 +116,7 @@ namespace GymAPI.Tests.Controllers
 		public async Task DeleteMembership_ReturnsNoContent_WhenMembershipIsDeleted()
 		{
 			// Arrange
-			var existingMembership = new Membership { MembershipID = 1, MemberID = 1, StartDate = System.DateTime.Now, EndDate = System.DateTime.Now.AddYears(1), Type = "Annual", IsActive = true };
+			var existingMembership = new Membership { MembershipID = 1, MemberID = 1, StartDate = System.DateTime.Now, EndDate = System.DateTime.Now.AddYears(1), PaymentType = "Annual", IsActive = true };
 			_mockMembershipService.Setup(service => service.GetMembershipByIdAsync(1))
 				.ReturnsAsync(existingMembership);
 			_mockMembershipService.Setup(service => service.DeleteMembershipAsnyc(1))
