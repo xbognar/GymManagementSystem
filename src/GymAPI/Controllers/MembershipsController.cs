@@ -52,10 +52,6 @@ namespace GymDBAccess.Controllers
 		[HttpPut("{id}")]
 		public async Task<IActionResult> UpdateMembership(int id, [FromBody] Membership membership)
 		{
-			if (id != membership.MemberID)
-			{
-				return BadRequest();
-			}
 
 			await _membershipService.UpdateMembershipAsync(membership);
 			return NoContent();

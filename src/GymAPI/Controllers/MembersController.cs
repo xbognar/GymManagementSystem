@@ -4,6 +4,7 @@ using GymDBAccess.Services.Interfaces;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Authorization;
+using System.Net.Http;
 
 namespace GymDBAccess.Controllers
 {
@@ -87,6 +88,7 @@ namespace GymDBAccess.Controllers
 
 			return Ok(memberId.Value);
 		}
+
 
 	}
 }
