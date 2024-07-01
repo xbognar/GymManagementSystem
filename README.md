@@ -136,8 +136,6 @@ Compose for easy deployment.
 
         -   `POST /api/auth/login`
 
-        -   `POST /api/auth/refresh`
-
     -   **Members:**
 
         -   `GET /api/members`
@@ -161,6 +159,12 @@ Compose for easy deployment.
         -   `PUT /api/memberships/{id}`
 
         -   `DELETE /api/memberships/{id}`
+     
+        -   `GET /api/memberships/active`
+     
+        -   `GET /api/memberships/inactive`
+     
+        -   `GET /api/memberships/user/{memberId}/memberships`
 
     -   **Chips:**
 
