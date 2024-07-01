@@ -1,10 +1,7 @@
 
 # Gym Management API Documentation
 
-The Gym Management API is designed to manage gym memberships, members,
-and access control. The backend is developed using C# and .NET, with an
-MSSQL database. The project is containerized using Docker and Docker
-Compose for easy deployment.
+The Gym Management API is designed to manage gym memberships, members, and access control. The backend is developed using C# and .NET, with an MSSQL database. The project is designed to run locally on a client's PC, where Docker containers manage both the database and backend services. This setup connects with a WPF desktop application frontend, allowing you to manage the gym's members and clients efficiently. The API is secured using JWT (JSON Web Tokens) and is rigorously tested with unit and integration tests for services and controllers to ensure reliability and correctness. The containerized architecture using Docker and Docker Compose ensures easy deployment and consistent runtime environments.
 
 # Technologies Used 
 
