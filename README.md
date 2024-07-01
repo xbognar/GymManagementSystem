@@ -111,7 +111,7 @@ Compose for easy deployment.
 
 2.  **Build and run the Docker containers:**
 
-                    docker-compose up --build
+                    docker-compose up -d
 
 3.  **Apply migrations:**
 
