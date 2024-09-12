@@ -32,8 +32,6 @@ The Gym Management API is designed to manage gym memberships, members, and acces
 
 -   **Global Error Handling:** Centralized handling of exceptions.
 
--   **Rate Limiting:** Protecting the API from abuse.
-
 -   **Integration Tests:** Ensuring the API endpoints function
     correctly.
 
