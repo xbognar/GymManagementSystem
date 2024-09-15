@@ -6,45 +6,31 @@ The Gym Management API is designed to manage gym memberships, members, and acces
 # Technologies Used 
 
 -   **Programming Language:** C#
-
 -   **Framework:** .NET 8.0
-
 -   **Database:** MSSQL
-
 -   **ORM:** Entity Framework Core
-
 -   **Authentication:** JWT (JSON Web Tokens)
-
 -   **Containerization:** Docker
-
 -   **API Documentation:** Swagger
-
 -   **Testing:** xUnit, Moq
 
 # Features 
 
 -   **User Authentication:** Secure login with JWT tokens.
-
 -   **Membership Management:** CRUD operations for members and
     memberships.
-
 -   **Chip Management:** Managing gym access chips.
-
 -   **Global Error Handling:** Centralized handling of exceptions.
-
 -   **Integration Tests:** Ensuring the API endpoints function
     correctly.
-
 -   **Unit Tests:** Testing the core logic and services.
+-   **Automated Scripts:** Simplified start and stop scripts for running the application.
 
-# Getting Started 
-
-## Prerequisites 
+# Prerequisites 
 
 -   [.NET 8.0 SDK](https://dotnet.microsoft.com/download/dotnet/8.0)
-
 -   [Docker](https://www.docker.com/)
-
+-   [Docker Desktop](https://www.docker.com/products/docker-desktop)
 -   [Microsoft SQL
     Server](https://www.microsoft.com/en-us/sql-server/sql-server-downloads)
 
@@ -96,13 +82,20 @@ The Gym Management API is designed to manage gym memberships, members, and acces
             ├── Dockerfile
             ├── docker-compose.yml
             └── README.md
+            ├── StartBE.bat
+            └── StopBE.bat  
+
+# Script Details
+
+- **StartBE.bat:** This script starts Docker Desktop (if not already running), navigates to the project directory, and starts the Docker containers using Docker Compose. It allows the user to run the application with a single click.
+- **StopBE.bat:** This script stops all running Docker containers related to the application and stops Docker Desktop. It provides a clean and easy way to shut down the application.
 
 # Installation 
 
 1.  **Clone the repository:**
 
-                    git clone https://github.com/yourusername/gym-management-api.git
-                    cd gym-management-api
+                    git clone https://github.com/xbognar/GymManagementSystem.git
+                    cd GymManagementSystem
 
 2.  **Build and run the Docker containers:**
 
@@ -175,13 +168,8 @@ The Gym Management API is designed to manage gym memberships, members, and acces
 
 # Testing
 
-## Run Unit Tests: 
+### Run Integration and Unit Tests: 
 
             dotnet test tests/GymDBAccess.Tests/
             dotnet test tests/GymAPI.Tests/
-
-## Integration Tests: 
-
-Integration tests are included in the `GymAPI.Tests` project and can be
-run with the same `dotnet test` command.
 
