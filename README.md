@@ -6,47 +6,31 @@ The Gym Management API is designed to manage gym memberships, members, and acces
 # Technologies Used 
 
 -   **Programming Language:** C#
-
 -   **Framework:** .NET 8.0
-
 -   **Database:** MSSQL
-
 -   **ORM:** Entity Framework Core
-
 -   **Authentication:** JWT (JSON Web Tokens)
-
 -   **Containerization:** Docker
-
 -   **API Documentation:** Swagger
-
 -   **Testing:** xUnit, Moq
 
 # Features 
 
 -   **User Authentication:** Secure login with JWT tokens.
-
 -   **Membership Management:** CRUD operations for members and
     memberships.
-
 -   **Chip Management:** Managing gym access chips.
-
 -   **Global Error Handling:** Centralized handling of exceptions.
-
--   **Rate Limiting:** Protecting the API from abuse.
-
 -   **Integration Tests:** Ensuring the API endpoints function
     correctly.
-
 -   **Unit Tests:** Testing the core logic and services.
+-   **Automated Scripts:** Simplified start and stop scripts for running the application.
 
-# Getting Started 
-
-## Prerequisites 
+# Prerequisites 
 
 -   [.NET 8.0 SDK](https://dotnet.microsoft.com/download/dotnet/8.0)
-
 -   [Docker](https://www.docker.com/)
-
+-   [Docker Desktop](https://www.docker.com/products/docker-desktop)
 -   [Microsoft SQL
     Server](https://www.microsoft.com/en-us/sql-server/sql-server-downloads)
 
@@ -98,36 +82,56 @@ The Gym Management API is designed to manage gym memberships, members, and acces
             ├── Dockerfile
             ├── docker-compose.yml
             └── README.md
+            ├── StartBE.bat
+            └── StopBE.bat  
+
+# Script Details
+
+- **StartBE.bat:** This script starts Docker Desktop (if not already running), navigates to the project directory, and starts the Docker containers using Docker Compose. It allows the user to run the application with a single click.
+- **StopBE.bat:** This script stops all running Docker containers related to the application and stops Docker Desktop. It provides a clean and easy way to shut down the application.
 
 # Installation 
 
 1.  **Clone the repository:**
 
-                    git clone https://github.com/yourusername/gym-management-api.git
-                    cd gym-management-api
+                    git clone https://github.com/xbognar/GymManagementSystem.git
+                    cd GymManagementSystem
 
-2.  **Build and run the Docker containers:**
+2. **Create a `.env` file in the root directory:**
 
-                    docker-compose up -d
+   ```bash
+    ASPNETCORE_ENVIRONMENT=Production
+    CONNECTION_STRING=Server=db;Database=GymDatabase;User Id=sa;Password=YourStrong@Passw0rd; 
+    JWT_KEY=your_very_secure_jwt_key
+    LOGIN_USERNAME=your_auth_username
+    LOGIN_PASSWORD=your_auth_password
+    SA_PASSWORD=your_sa_password
+   ```
 
-3.  **Apply migrations:**
+3. **Run the application using the START script:**
 
-    The migrations will be applied automatically when the application
-    starts.
+   Simply double-click the `START.bat` file. This will automatically start Docker Desktop (if not running), build and run the containers, and set up the application environment.
+
+4. **Apply migrations:**
+
+   Migrations will be applied automatically when the application starts.
 
 # Usage 
 
 1.  **Starting the API:**
 
-    The API will be available at `http://localhost:80` after running
-    `docker-compose up`.
+    The API will be available at `http://localhost:80` after running the `START.bat` script.
 
-2.  **Accessing Swagger:**
+2. **Stopping the API:**
+
+   To stop the API and Docker containers, double-click the `STOP.bat` file. This will shut down the containers and stop Docker Desktop.
+
+3.  **Accessing Swagger:**
 
     Swagger documentation will be available at
     `http://localhost:80/swagger`.
 
-3.  **Endpoints:**
+4.  **Endpoints:**
 
     -   **Authentication:**
 
@@ -177,13 +181,13 @@ The Gym Management API is designed to manage gym memberships, members, and acces
 
 # Testing
 
-## Run Unit Tests: 
+### Integration and Unit Tests: 
+
+Run the following commands to execute the tests:
 
             dotnet test tests/GymDBAccess.Tests/
             dotnet test tests/GymAPI.Tests/
 
-## Integration Tests: 
-
-Integration tests are included in the `GymAPI.Tests` project and can be
-run with the same `dotnet test` command.
+- **Mocking:** The tests use Moq for mocking dependencies, ensuring that the controllers and services are tested in isolation.
+- **Endpoint Testing:** Each endpoint is tested to confirm it handles both valid and invalid inputs correctly, verifying authentication, authorization, and business logic.
 
