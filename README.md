@@ -97,28 +97,41 @@ The Gym Management API is designed to manage gym memberships, members, and acces
                     git clone https://github.com/xbognar/GymManagementSystem.git
                     cd GymManagementSystem
 
-2.  **Build and run the Docker containers:**
+2. **Create a `.env` file in the root directory:**
 
-                    docker-compose up -d
+   ```bash
+    ASPNETCORE_ENVIRONMENT=Production
+    CONNECTION_STRING=Server=db;Database=GymDatabase;User Id=sa;Password=YourStrong@Passw0rd; 
+    JWT_KEY=your_very_secure_jwt_key
+    LOGIN_USERNAME=your_auth_username
+    LOGIN_PASSWORD=your_auth_password
+    SA_PASSWORD=your_sa_password
+   ```
 
-3.  **Apply migrations:**
+3. **Run the application using the START script:**
 
-    The migrations will be applied automatically when the application
-    starts.
+   Simply double-click the `START.bat` file. This will automatically start Docker Desktop (if not running), build and run the containers, and set up the application environment.
+
+4. **Apply migrations:**
+
+   Migrations will be applied automatically when the application starts.
 
 # Usage 
 
 1.  **Starting the API:**
 
-    The API will be available at `http://localhost:80` after running
-    `docker-compose up`.
+    The API will be available at `http://localhost:80` after running the `START.bat` script.
 
-2.  **Accessing Swagger:**
+2. **Stopping the API:**
+
+   To stop the API and Docker containers, double-click the `STOP.bat` file. This will shut down the containers and stop Docker Desktop.
+
+3.  **Accessing Swagger:**
 
     Swagger documentation will be available at
     `http://localhost:80/swagger`.
 
-3.  **Endpoints:**
+4.  **Endpoints:**
 
     -   **Authentication:**
 
@@ -168,8 +181,13 @@ The Gym Management API is designed to manage gym memberships, members, and acces
 
 # Testing
 
-### Run Integration and Unit Tests: 
+### Integration and Unit Tests: 
+
+Run the following commands to execute the tests:
 
             dotnet test tests/GymDBAccess.Tests/
             dotnet test tests/GymAPI.Tests/
+
+- **Mocking:** The tests use Moq for mocking dependencies, ensuring that the controllers and services are tested in isolation.
+- **Endpoint Testing:** Each endpoint is tested to confirm it handles both valid and invalid inputs correctly, verifying authentication, authorization, and business logic.
 
