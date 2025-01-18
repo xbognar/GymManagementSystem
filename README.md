@@ -187,55 +187,43 @@ Below is the UML diagram showing the relationships between the classes:
 
 ## Testing
 
-The Gym Management API is fully covered by **Unit Tests** and **Integration Tests** that validate different aspects of the codebase:
+This project is covered by **two** dedicated test projects—**UnitTests** and **IntegrationTests**—ensuring both quick validation of core logic and comprehensive end-to-end checks:
 
-1. **Unit Tests**  
-   - **Scope**:  
-     - **Services** (e.g., `MemberService`, `ChipService`, `MembershipService`) are tested with **mocked** `ApplicationDbContext` to verify business logic, database interactions, and error handling in isolation.  
-     - **Controllers** (e.g., `AuthController`, `MembersController`, `ChipsController`, `MembershipsController`) are tested by **mocking** their service dependencies. We confirm correct HTTP status codes (`200 OK`, `404 Not Found`, etc.) and ensure each endpoint behaves as expected.
-   - **Tools**:  
-     - [xUnit](https://xunit.net/) for the test framework.  
-     - [Moq](https://github.com/moq/moq4) for mocking dependencies.  
-     - [FluentAssertions](https://fluentassertions.com/) for more expressive test assertions.
-   - **Benefits**:  
-     - **Fast** feedback cycle.  
-     - Ensures **controllers** and **services** each work correctly in isolation.  
-     - Tests **all** edge cases without hitting the real database.
+### Unit Tests
+- **Scope**:  
+  - **Services**: Each service (e.g., `ChipService`, `MembershipService`, etc.) is tested by **mocking** the EF Core `DbContext` and ensuring all business logic, validation, and database calls behave as intended—without hitting a real DB.  
+  - **Controllers**: Each controller (e.g., `ChipsController`, `MembersController`) is tested by **mocking** its corresponding service interface, verifying correct HTTP responses (`200 OK`, `404 NotFound`, etc.) and parameter validation in isolation.
 
-2. **Integration Tests**  
-   - **Scope**:  
-     - Tests the **entire** ASP.NET Core pipeline: from HTTP routing and controllers down to the **in-memory** EF Core database.  
-     - Validates **authentication** flows by obtaining real JWT tokens and hitting `[Authorize]` endpoints (e.g., `/api/chips`, `/api/members`).  
-     - Verifies **CRUD** operations actually store and retrieve data using a **test** DB with seeded data.
-   - **Tools**:  
-     - [Microsoft.AspNetCore.Mvc.Testing](https://learn.microsoft.com/en-us/dotnet/core/testing/integration-testing) to spin up the API in memory using a `WebApplicationFactory<Program>`.  
-     - [EF Core InMemory](https://learn.microsoft.com/en-us/ef/core/providers/in-memory) to **swap** the SQL database for a local, ephemeral store in tests.  
-     - [FluentAssertions](https://fluentassertions.com/) for consistent, readable assertions.
-   - **Approach**:  
-     1. A **`WebApplicationFactory<Program>`** loads the real `Program.cs`.  
-     2. **`IntegrationTestFixture`** replaces the normal SQL registration with an **in-memory** DB.  
-     3. **`SeedDataHelper`** populates initial members, memberships, and chips.  
-     4. Each test uses an **`HttpClient`** to call endpoints like `/api/members`.  
-     5. If an endpoint requires **auth**, we **login** (`POST /api/auth/login`) to get a **JWT** and pass it via **Bearer** token.
-   - **Benefits**:  
-     - Ensures controllers, services, and DB interactions all work **together**.  
-     - Catches **configuration** or **dependency injection** mistakes.  
-     - Confirms **authorization** logic (e.g., no token → `401 Unauthorized`).
+- **Tools**:  
+  - [xUnit](https://xunit.net/) for the test framework  
+  - [Moq](https://github.com/moq/moq4) for mocking dependencies  
+  - [FluentAssertions](https://fluentassertions.com/) for expressive assertions
 
-### How to Run Tests
+### Integration Tests
+- **Scope**:  
+  - **End-to-End**: Tests the entire ASP.NET Core pipeline using a **real** `HttpClient`.  
+  - **InMemory DB**: Replaces the usual SQL database with EF Core’s in-memory provider so tests can run quickly and deterministically.  
+  - **Authentication**: Logs in to obtain a **real JWT** token, then verifies authorized endpoints (e.g., `[Authorize]`) properly enforce authentication.
 
-Use the standard .NET testing commands:
+- **How it Works**:
+  1. A **`WebApplicationFactory<Program>`** stands up the application in-memory.  
+  2. A custom fixture **overrides** the database registration to `UseInMemoryDatabase(...)`.  
+  3. A **seed** step inserts basic test data (e.g., members, chips, memberships).  
+  4. Each test issues standard HTTP calls (`GET`, `POST`, etc.) to endpoints and asserts correct status codes, responses, and DB changes.
+
+### Running Tests
+
+From the **solution root**, use standard .NET test commands:
 
 ```bash
-# Run all tests in the GymDBAccess.Tests (Unit Tests for Services) 
-dotnet test tests/GymDBAccess.Tests/
+# Run only the Unit Tests
+dotnet test tests/UnitTests/UnitTests.csproj
 
-# Run all tests in the GymAPI.Tests (Unit Tests for Controllers)
-dotnet test tests/GymAPI.Tests/
+# Run only the Integration Tests
+dotnet test tests/IntegrationTests/IntegrationTests.csproj
 
-# If you have separate IntegrationTests project:
-dotnet test tests/IntegrationTests/
+# Or run all discovered tests in all test projects
+dotnet test
 ```
 
-Both unit and integration tests run as part of the same solution. By combining these test layers, the Gym Management API maintains a high level of reliability and confidence in its authentication, data access, and core business logic.
-
+By combining fast Unit Tests for isolated logic checks with comprehensive Integration Tests for real-world scenarios, the Gym Management API provides a robust and reliable experience for developers and end-users alike.
