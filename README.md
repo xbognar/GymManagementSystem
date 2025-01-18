@@ -43,53 +43,92 @@ Below is the UML diagram showing the relationships between the classes:
 # Project Structure 
 
             GymManagementSystem/
+            ├── .dockerignore
+            ├── .env
+            ├── .gitattributes
+            ├── .gitignore
+            ├── docker-compose.yml
+            ├── Dockerfile
+            ├── GymManagementSystem.sln
+            ├── README.md
+            ├── StartBE.bat
+            ├── StopBE.bat
+            ├── .github/
+            │   └── workflows/
+            ├── docs/
+            │   └── TableRelations.png
             ├── src/
             │   ├── GymAPI/
+            │   │   ├── appsettings.Development.json
+            │   │   ├── appsettings.json
+            │   │   ├── GymAPI.csproj
+            │   │   ├── GymAPI.http
+            │   │   ├── Program.cs
             │   │   ├── Controllers/
             │   │   │   ├── AuthController.cs
             │   │   │   ├── ChipsController.cs
             │   │   │   ├── MembersController.cs
             │   │   │   └── MembershipsController.cs
-            │   │   ├── Program.cs
-            │   │   ├── GymAPI.csproj
-            │   │   └── ...
+            │   │   └── Properties/
+            │   │       └── launchSettings.json
             │   ├── GymDBAccess/
+            │   │   ├── GymDBAccess.csproj
             │   │   ├── DataAccess/
             │   │   │   └── ApplicationDbContext.cs
             │   │   ├── DTOs/
             │   │   │   ├── ActiveChipDTO.cs
             │   │   │   ├── ActiveMembershipDTO.cs
-            │   │   │   └── ...
+            │   │   │   ├── InactiveChipDTO.cs
+            │   │   │   ├── InactiveMembershipDTO.cs
+            │   │   │   ├── UserMembershipsDTO.cs
+            │   │   │   ├── CreateChipDTO.cs
+            │   │   │   ├── CreateMembershipDTO.cs
+            │   │   │   ├── UpdateChipDTO.cs
+            │   │   │   └── UpdateMembershipDTO.cs
             │   │   ├── Models/
             │   │   │   ├── Chip.cs
+            │   │   │   ├── ChipUpdateRequest.cs
+            │   │   │   ├── LoginModel.cs
             │   │   │   ├── Member.cs
             │   │   │   └── Membership.cs
             │   │   ├── Services/
             │   │   │   ├── ChipService.cs
+            │   │   │   ├── JwtService.cs
             │   │   │   ├── MemberService.cs
             │   │   │   ├── MembershipService.cs
             │   │   │   └── Interfaces/
             │   │   │       ├── IChipService.cs
+            │   │   │       ├── IJwtService.cs
             │   │   │       ├── IMemberService.cs
             │   │   │       └── IMembershipService.cs
-            │   │   └── GymDBAccess.csproj
+            │   │   ├── Migrations/
+            │   │   │   ├── <migration files>
+            │   │   │   └── ApplicationDbContextModelSnapshot.cs
             ├── tests/
-            │   ├── GymAPI.Tests/
+            │   ├── IntegrationTests/
+            │   │   ├── IntegrationTests.csproj
             │   │   ├── Controllers/
+            │   │   │   ├── AuthControllerIntegrationTests.cs
+            │   │   │   ├── ChipsControllerIntegrationTests.cs
+            │   │   │   ├── MembersControllerIntegrationTests.cs
+            │   │   │   └── MembershipsControllerIntegrationTests.cs
+            │   │   ├── Dependencies/
+            │   │   │   ├── IntegrationTestFixture.cs
+            │   │   │   ├── SeedDataHelper.cs
+            │   │   │   └── TestUtilities.cs
+            │   ├── UnitTests/
+            │   │   ├── UnitTests.csproj
+            │   │   ├── Controllers/
+            │   │   │   ├── AuthControllerTests.cs
             │   │   │   ├── ChipsControllerTests.cs
             │   │   │   ├── MembersControllerTests.cs
             │   │   │   └── MembershipsControllerTests.cs
-            │   │   └── GymAPI.Tests.csproj
-            │   ├── GymDBAccess.Tests/
-            │   │   ├── ChipServiceTests.cs
-            │   │   ├── MemberServiceTests.cs
-            │   │   └── MembershipServiceTests.cs
-            │   │   └── GymDBAccess.Tests.csproj
-            ├── Dockerfile
-            ├── docker-compose.yml
-            └── README.md
-            ├── StartBE.bat
-            └── StopBE.bat  
+            │   │   ├── Services/
+            │   │   │   ├── ChipServiceTests.cs
+            │   │   │   ├── JwtServiceTests.cs
+            │   │   │   ├── MemberServiceTests.cs
+            │   │   │   └── MembershipServiceTests.cs
+
 
 # Script Details
 
