@@ -34,6 +34,12 @@ The Gym Management API is designed to manage gym memberships, members, and acces
 -   [Microsoft SQL
     Server](https://www.microsoft.com/en-us/sql-server/sql-server-downloads)
 
+## UML Diagram
+
+Below is the UML diagram showing the relationships between the classes:
+
+![Model Relations](https://github.com/xbognar/GymManagementSystem/blob/master/docs/TableRelations.png)
+
 # Project Structure 
 
             GymManagementSystem/
