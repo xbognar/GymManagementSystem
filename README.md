@@ -12,7 +12,7 @@ The Gym Management API is designed to manage gym memberships, members, and acces
 -   **Authentication:** JWT (JSON Web Tokens)
 -   **Containerization:** Docker
 -   **API Documentation:** Swagger
--   **Testing:** xUnit, Moq
+-   **Testing:** xUnit, Moq, FluentAssertions
 
 # Features 
 
@@ -43,18 +43,13 @@ Below is the UML diagram showing the relationships between the classes:
 # Project Structure 
 
             GymManagementSystem/
-            ├── .dockerignore
             ├── .env
-            ├── .gitattributes
-            ├── .gitignore
             ├── docker-compose.yml
             ├── Dockerfile
             ├── GymManagementSystem.sln
             ├── README.md
             ├── StartBE.bat
             ├── StopBE.bat
-            ├── .github/
-            │   └── workflows/
             ├── docs/
             │   └── TableRelations.png
             ├── src/
