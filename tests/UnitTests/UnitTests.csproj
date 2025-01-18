@@ -23,11 +23,6 @@
   </ItemGroup>
 
   <ItemGroup>
-    <Folder Include="Controllers\" />
-    <Folder Include="Services\" />
-  </ItemGroup>
-
-  <ItemGroup>
     <ProjectReference Include="..\..\src\GymAPI\GymAPI.csproj" />
     <ProjectReference Include="..\..\src\GymDBAccess\GymDBAccess.csproj" />
   </ItemGroup>

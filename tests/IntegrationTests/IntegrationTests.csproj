@@ -24,8 +24,8 @@
   </ItemGroup>
 
   <ItemGroup>
-    <Folder Include="Controllers\" />
-    <Folder Include="Dependencies\" />
+    <ProjectReference Include="..\..\src\GymAPI\GymAPI.csproj" />
+    <ProjectReference Include="..\..\src\GymDBAccess\GymDBAccess.csproj" />
   </ItemGroup>
 
 </Project>
