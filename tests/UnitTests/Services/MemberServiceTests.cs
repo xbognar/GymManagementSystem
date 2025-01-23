@@ -1,9 +1,9 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using Xunit;
 using FluentAssertions;
-using Moq;
 using Microsoft.EntityFrameworkCore;
 using GymDBAccess.DataAccess;
 using GymDBAccess.Models;
@@ -12,200 +12,179 @@ using GymDBAccess.Services.Interfaces;
 
 namespace UnitTests.Services
 {
-	public class MemberServiceTests
+	/// <summary>
+	/// Unit tests for the <see cref="MemberService"/> class, ensuring correct behavior of member-related operations.
+	/// </summary>
+	public class MemberServiceTests : IDisposable
 	{
-		private readonly Mock<ApplicationDbContext> _dbContextMock;
-		private readonly Mock<DbSet<Member>> _memberDbSetMock;
+		private readonly ApplicationDbContext _dbContext;
 		private readonly MemberService _service;
+		private readonly string _databaseName;
 
+		/// <summary>
+		/// Initializes a new instance of the <see cref="MemberServiceTests"/> class.
+		/// Sets up the in-memory database and seeds initial data.
+		/// </summary>
 		public MemberServiceTests()
 		{
-			var options = new DbContextOptions<ApplicationDbContext>();
-			_dbContextMock = new Mock<ApplicationDbContext>(options);
+			_databaseName = Guid.NewGuid().ToString();
 
-			_memberDbSetMock = new Mock<DbSet<Member>>();
-			_dbContextMock.Setup(db => db.Members).Returns(_memberDbSetMock.Object);
+			var options = new DbContextOptionsBuilder<ApplicationDbContext>()
+				.UseInMemoryDatabase(databaseName: _databaseName)
+				.Options;
 
-			_service = new MemberService(_dbContextMock.Object);
+			_dbContext = new ApplicationDbContext(options);
+
+			_dbContext.Members.AddRange(new List<Member>
+			{
+				new Member { MemberID = 1, FirstName = "John", LastName = "Doe" },
+				new Member { MemberID = 2, FirstName = "Jane", LastName = "Doe" }
+			});
+
+			_dbContext.SaveChanges();
+
+			_service = new MemberService(_dbContext);
 		}
 
 		/// <summary>
-		/// Tests that GetMemberByIdAsync returns the member if found.
+		/// Tests that <see cref="MemberService.GetMemberByIdAsync(int)"/> returns the member when it exists.
 		/// </summary>
 		[Fact]
-		public async Task GetMemberByIdAsync_WhenFound_ReturnsMember()
+		public async Task GetMemberByIdAsync_ShouldReturnMember_WhenMemberExists()
 		{
-			// Arrange
-			var testMember = new Member { MemberID = 1, FirstName = "John", LastName = "Doe" };
-			_dbContextMock.Setup(db => db.Members.FindAsync(1)).ReturnsAsync(testMember);
+			int memberId = 1;
 
-			// Act
-			var result = await _service.GetMemberByIdAsync(1);
+			var result = await _service.GetMemberByIdAsync(memberId);
 
-			// Assert
 			result.Should().NotBeNull();
-			result.MemberID.Should().Be(1);
+			result.MemberID.Should().Be(memberId);
 			result.FirstName.Should().Be("John");
+			result.LastName.Should().Be("Doe");
 		}
 
 		/// <summary>
-		/// Tests that GetMemberByIdAsync returns null if the member is not found.
+		/// Tests that <see cref="MemberService.GetMemberByIdAsync(int)"/> returns null when the member does not exist.
 		/// </summary>
 		[Fact]
-		public async Task GetMemberByIdAsync_WhenNotFound_ReturnsNull()
+		public async Task GetMemberByIdAsync_ShouldReturnNull_WhenMemberDoesNotExist()
 		{
-			// Arrange
-			_dbContextMock.Setup(db => db.Members.FindAsync(999)).ReturnsAsync((Member)null);
+			int memberId = 999;
 
-			// Act
-			var result = await _service.GetMemberByIdAsync(999);
+			var result = await _service.GetMemberByIdAsync(memberId);
 
-			// Assert
 			result.Should().BeNull();
 		}
 
 		/// <summary>
-		/// Tests that GetAllMembersAsync returns all the members in the database.
+		/// Tests that <see cref="MemberService.GetAllMembersAsync"/> returns all members.
 		/// </summary>
 		[Fact]
-		public async Task GetAllMembersAsync_ReturnsAllMembers()
+		public async Task GetAllMembersAsync_ShouldReturnAllMembers()
 		{
-			// Arrange
-			var membersData = new List<Member>
-			{
-				new Member { MemberID = 1 },
-				new Member { MemberID = 2 }
-			}.AsQueryable();
-
-			_memberDbSetMock.As<IQueryable<Member>>().Setup(m => m.Provider).Returns(membersData.Provider);
-			_memberDbSetMock.As<IQueryable<Member>>().Setup(m => m.Expression).Returns(membersData.Expression);
-			_memberDbSetMock.As<IQueryable<Member>>().Setup(m => m.ElementType).Returns(membersData.ElementType);
-			_memberDbSetMock.As<IQueryable<Member>>().Setup(m => m.GetEnumerator()).Returns(membersData.GetEnumerator());
-
-			// Act
 			var result = await _service.GetAllMembersAsync();
 
-			// Assert
 			result.Should().HaveCount(2);
+			result.Should().Contain(m => m.MemberID == 1 && m.FirstName == "John" && m.LastName == "Doe");
+			result.Should().Contain(m => m.MemberID == 2 && m.FirstName == "Jane" && m.LastName == "Doe");
 		}
 
 		/// <summary>
-		/// Tests that AddMemberAsync adds a new member and saves changes.
+		/// Tests that <see cref="MemberService.AddMemberAsync(Member)"/> adds a new member and saves changes.
 		/// </summary>
 		[Fact]
-		public async Task AddMemberAsync_AddsAndSaves()
+		public async Task AddMemberAsync_ShouldAddMember_AndSaveChanges()
 		{
-			// Arrange
-			var newMember = new Member { MemberID = 10 };
+			var newMember = new Member { MemberID = 10, FirstName = "Test", LastName = "User" };
 
-			// Act
 			await _service.AddMemberAsync(newMember);
 
-			// Assert
-			_dbContextMock.Verify(db => db.Members.AddAsync(newMember, default), Times.Once);
-			_dbContextMock.Verify(db => db.SaveChangesAsync(default), Times.Once);
+			var memberInDb = await _dbContext.Members.FindAsync(newMember.MemberID);
+			memberInDb.Should().NotBeNull();
+			memberInDb.FirstName.Should().Be("Test");
+			memberInDb.LastName.Should().Be("User");
 		}
 
 		/// <summary>
-		/// Tests that UpdateMemberAsync updates a member and saves changes.
+		/// Tests that <see cref="MemberService.UpdateMemberAsync(Member)"/> updates an existing member and saves changes.
 		/// </summary>
 		[Fact]
-		public async Task UpdateMemberAsync_UpdatesAndSaves()
+		public async Task UpdateMemberAsync_ShouldUpdateMember_AndSaveChanges()
 		{
-			// Arrange
-			var existingMember = new Member { MemberID = 5 };
+			var existingMember = await _dbContext.Members.FindAsync(1);
+			existingMember.FirstName = "Johnny";
 
-			// Act
 			await _service.UpdateMemberAsync(existingMember);
 
-			// Assert
-			_dbContextMock.Verify(db => db.Members.Update(existingMember), Times.Once);
-			_dbContextMock.Verify(db => db.SaveChangesAsync(default), Times.Once);
+			var memberInDb = await _dbContext.Members.FindAsync(existingMember.MemberID);
+			memberInDb.FirstName.Should().Be("Johnny");
 		}
 
 		/// <summary>
-		/// Tests that DeleteMemberAsync removes a member when found, then saves.
+		/// Tests that <see cref="MemberService.DeleteMemberAsync(int)"/> removes the member when it exists and saves changes.
 		/// </summary>
 		[Fact]
-		public async Task DeleteMemberAsync_WhenFound_DeletesAndSaves()
+		public async Task DeleteMemberAsync_ShouldRemoveMember_AndSaveChanges_WhenMemberExists()
 		{
-			// Arrange
-			var existingMember = new Member { MemberID = 7 };
-			_dbContextMock.Setup(db => db.Members.FindAsync(7)).ReturnsAsync(existingMember);
+			int memberId = 2;
 
-			// Act
-			await _service.DeleteMemberAsync(7);
+			await _service.DeleteMemberAsync(memberId);
 
-			// Assert
-			_dbContextMock.Verify(db => db.Members.Remove(existingMember), Times.Once);
-			_dbContextMock.Verify(db => db.SaveChangesAsync(default), Times.Once);
+			var memberInDb = await _dbContext.Members.FindAsync(memberId);
+			memberInDb.Should().BeNull();
 		}
 
 		/// <summary>
-		/// Tests that DeleteMemberAsync does nothing if the member is not found.
+		/// Tests that <see cref="MemberService.DeleteMemberAsync(int)"/> does nothing when the member does not exist.
 		/// </summary>
 		[Fact]
-		public async Task DeleteMemberAsync_WhenNotFound_DoesNothing()
+		public async Task DeleteMemberAsync_ShouldDoNothing_WhenMemberDoesNotExist()
 		{
-			// Arrange
-			_dbContextMock.Setup(db => db.Members.FindAsync(999)).ReturnsAsync((Member)null);
+			int memberId = 999;
 
-			// Act
-			await _service.DeleteMemberAsync(999);
+			await _service.DeleteMemberAsync(memberId);
 
-			// Assert
-			_dbContextMock.Verify(db => db.Members.Remove(It.IsAny<Member>()), Times.Never);
-			_dbContextMock.Verify(db => db.SaveChangesAsync(default), Times.Never);
+			var memberInDb = await _dbContext.Members.FindAsync(memberId);
+			memberInDb.Should().BeNull();
 		}
 
 		/// <summary>
-		/// Tests that GetMemberIdByNameAsync returns the MemberID if the name matches.
+		/// Tests that <see cref="MemberService.GetMemberIdByNameAsync(string)"/> returns the MemberID when the name matches.
 		/// </summary>
 		[Fact]
-		public async Task GetMemberIdByNameAsync_WhenMatchFound_ReturnsMemberID()
+		public async Task GetMemberIdByNameAsync_ShouldReturnMemberId_WhenNameMatches()
 		{
-			// Arrange
-			var membersData = new List<Member>
-			{
-				new Member { MemberID = 50, FirstName = "Alice", LastName = "Smith" }
-			}.AsQueryable();
+			string fullName = "Alice Smith";
+			var newMember = new Member { MemberID = 50, FirstName = "Alice", LastName = "Smith" };
+			_dbContext.Members.Add(newMember);
+			await _dbContext.SaveChangesAsync();
 
-			_memberDbSetMock.As<IQueryable<Member>>().Setup(m => m.Provider).Returns(membersData.Provider);
-			_memberDbSetMock.As<IQueryable<Member>>().Setup(m => m.Expression).Returns(membersData.Expression);
-			_memberDbSetMock.As<IQueryable<Member>>().Setup(m => m.ElementType).Returns(membersData.ElementType);
-			_memberDbSetMock.As<IQueryable<Member>>().Setup(m => m.GetEnumerator()).Returns(membersData.GetEnumerator());
+			var result = await _service.GetMemberIdByNameAsync(fullName);
 
-			// Act
-			var result = await _service.GetMemberIdByNameAsync("Alice Smith");
-
-			// Assert
 			result.Should().Be(50);
 		}
 
 		/// <summary>
-		/// Tests that GetMemberIdByNameAsync returns null if the format is incorrect or no match found.
+		/// Tests that <see cref="MemberService.GetMemberIdByNameAsync(string)"/> returns null when the name does not match or is in a bad format.
 		/// </summary>
 		[Fact]
-		public async Task GetMemberIdByNameAsync_WhenNoMatchOrBadFormat_ReturnsNull()
+		public async Task GetMemberIdByNameAsync_ShouldReturnNull_WhenNameDoesNotMatch_Or_BadFormat()
 		{
-			// Arrange
-			var membersData = new List<Member>
-			{
-				new Member { MemberID = 51, FirstName = "Some", LastName = "One" }
-			}.AsQueryable();
+			string badFormat = "JustOneName";
+			string noMatch = "Unknown Person";
 
-			_memberDbSetMock.As<IQueryable<Member>>().Setup(m => m.Provider).Returns(membersData.Provider);
-			_memberDbSetMock.As<IQueryable<Member>>().Setup(m => m.Expression).Returns(membersData.Expression);
-			_memberDbSetMock.As<IQueryable<Member>>().Setup(m => m.ElementType).Returns(membersData.ElementType);
-			_memberDbSetMock.As<IQueryable<Member>>().Setup(m => m.GetEnumerator()).Returns(membersData.GetEnumerator());
+			var badFormatResult = await _service.GetMemberIdByNameAsync(badFormat);
+			var noMatchResult = await _service.GetMemberIdByNameAsync(noMatch);
 
-			// Act
-			var badFormat = await _service.GetMemberIdByNameAsync("JustOneName");
-			var noMatch = await _service.GetMemberIdByNameAsync("Unknown Person");
+			badFormatResult.Should().BeNull();
+			noMatchResult.Should().BeNull();
+		}
 
-			// Assert
-			badFormat.Should().BeNull();
-			noMatch.Should().BeNull();
+		/// <summary>
+		/// Disposes the in-memory database after all tests are run.
+		/// </summary>
+		public void Dispose()
+		{
+			_dbContext.Dispose();
 		}
 	}
 }

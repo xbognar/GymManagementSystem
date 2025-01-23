@@ -21,7 +21,6 @@ namespace GymAPI.Controllers
 		[HttpPost("login")]
 		public IActionResult Login([FromBody] LoginModel login)
 		{
-			// Retrieve credentials from environment variables
 			var validUsername = Environment.GetEnvironmentVariable("LOGIN_USERNAME");
 			var validPassword = Environment.GetEnvironmentVariable("LOGIN_PASSWORD"); 
 

@@ -1,51 +1,40 @@
 ﻿using Microsoft.AspNetCore.Mvc.Testing;
-using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.DependencyInjection;
 using GymDBAccess.DataAccess;
-using System.Linq;
-using Microsoft.VisualStudio.TestPlatform.TestHost;
+using GymAPI;
+using System;
 
 namespace IntegrationTests.Dependencies
 {
 	/// <summary>
-	/// Custom WebApplicationFactory that overrides the real DB with an in-memory DB
-	/// and seeds test data on startup.
+	/// WebApplicationFactory fixture for integration tests.
+	/// Sets environment to "IntegrationTest" so Program.cs chooses a unique InMemory DB,
+	/// then seeds the DB with test data.
 	/// </summary>
 	public class IntegrationTestFixture : WebApplicationFactory<Program>
 	{
 		protected override IHost CreateHost(IHostBuilder builder)
 		{
-			builder.ConfigureServices(services =>
-			{
-				// Remove existing DbContext registration (SQL)
-				var descriptor = services.SingleOrDefault(
-					d => d.ServiceType == typeof(DbContextOptions<ApplicationDbContext>));
-				if (descriptor != null) services.Remove(descriptor);
+			// Force environment to "IntegrationTest"
+			builder.UseEnvironment("IntegrationTest");
 
-				// Register InMemory DB instead
-				services.AddDbContext<ApplicationDbContext>(options =>
-				{
-					options.UseInMemoryDatabase("GymIntegrationTestDb");
-				});
+			// Also set environment variables so AuthController can authenticate, etc.
+			Environment.SetEnvironmentVariable("ASPNETCORE_ENVIRONMENT", "IntegrationTest");
+			Environment.SetEnvironmentVariable("LOGIN_USERNAME", "testUser");
+			Environment.SetEnvironmentVariable("LOGIN_PASSWORD", "testPass");
+			Environment.SetEnvironmentVariable("JWT_KEY", "TestIntegrationJwtKeyOfAtLeast32Characters!!");
+			Environment.SetEnvironmentVariable("CONNECTION_STRING", "FakeIntegrationConnString");
 
-				// Build the service provider so we can seed data
-				var sp = services.BuildServiceProvider();
+			// Let the base create the host
+			var host = base.CreateHost(builder);
 
-				using (var scope = sp.CreateScope())
-				{
-					var scopedServices = scope.ServiceProvider;
-					var db = scopedServices.GetRequiredService<ApplicationDbContext>();
+			// Now seed the brand-new InMemory DB:
+			using var scope = host.Services.CreateScope();
+			var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+			SeedDataHelper.Seed(db);
 
-					// Ensure the database is created
-					db.Database.EnsureCreated();
-
-					// Seed test data
-					SeedDataHelper.Seed(db);
-				}
-			});
-
-			return base.CreateHost(builder);
+			return host;
 		}
 	}
 }

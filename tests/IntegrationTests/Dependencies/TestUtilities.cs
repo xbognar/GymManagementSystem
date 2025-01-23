@@ -3,8 +3,8 @@ using System.Net.Http.Json;
 using System.Threading.Tasks;
 using FluentAssertions;
 using System.Net;
+using System.Collections.Generic;
 using GymDBAccess.Models;
-using System.Dynamic;
 
 namespace IntegrationTests.Dependencies
 {
@@ -29,15 +29,17 @@ namespace IntegrationTests.Dependencies
 			};
 
 			var response = await client.PostAsJsonAsync("/api/auth/login", loginModel);
-			response.StatusCode.Should().Be(HttpStatusCode.OK, "login should succeed if credentials match environment variables");
+			response.StatusCode.Should().Be(HttpStatusCode.OK,
+				"login should succeed if credentials match environment variables");
 
-			var json = await response.Content.ReadFromJsonAsync<ExpandoObject>();
-			json.Should().NotBeNull();
+			var jsonDict = await response.Content.ReadFromJsonAsync<Dictionary<string, string>>();
+			jsonDict.Should().NotBeNull("the response must be valid JSON");
 
-			// The controller returns { "Token": "..." }
-			var tokenProperty = ((IDictionary<string, object>)json)["Token"];
-			tokenProperty.Should().NotBeNull();
-			return tokenProperty.ToString();
+			jsonDict.Should().ContainKey("token");
+			var token = jsonDict["token"];
+			token.Should().NotBeNullOrEmpty("the Token property should not be null");
+
+			return token;
 		}
 
 		/// <summary>

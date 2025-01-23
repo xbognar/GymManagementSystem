@@ -2,7 +2,7 @@
 using FluentAssertions;
 using Moq;
 using Microsoft.AspNetCore.Mvc;
-using GymDBAccess.Controllers;
+using GymAPI.Controllers;
 using GymDBAccess.Models;
 using GymDBAccess.Services.Interfaces;
 using System.Collections.Generic;
@@ -11,6 +11,9 @@ using GymDBAccess.DTOs;
 
 namespace UnitTests.Controllers
 {
+	/// <summary>
+	/// Unit tests for the ChipsController.
+	/// </summary>
 	public class ChipsControllerTests
 	{
 		private readonly Mock<IChipService> _chipServiceMock;
@@ -23,22 +26,29 @@ namespace UnitTests.Controllers
 		}
 
 		/// <summary>
-		/// Tests that GetChip returns Ok if the chip is found.
+		/// Tests that GetChip returns Ok with the chip if found.
 		/// </summary>
 		[Fact]
 		public async Task GetChip_WhenFound_ReturnsOk()
 		{
 			// Arrange
-			var chip = new Chip { ChipID = 10 };
-			_chipServiceMock.Setup(s => s.GetChipByIdAsync(10)).ReturnsAsync(chip);
+			var chipId = 10;
+			var chip = new Chip { ChipID = chipId, MemberID = 100, ChipInfo = "VIP Access", IsActive = true };
+			_chipServiceMock.Setup(s => s.GetChipByIdAsync(chipId))
+						   .ReturnsAsync(chip);
 
 			// Act
-			var result = await _controller.GetChip(10);
+			var result = await _controller.GetChip(chipId);
 
 			// Assert
-			var okResult = Assert.IsType<OkObjectResult>(result.Result);
-			var returnedChip = Assert.IsType<Chip>(okResult.Value);
-			returnedChip.ChipID.Should().Be(10);
+			var okResult = result.Result as OkObjectResult;
+			okResult.Should().NotBeNull();
+			okResult.StatusCode.Should().Be(200);
+
+			var returnedChip = okResult.Value as Chip;
+			returnedChip.Should().NotBeNull();
+			returnedChip.ChipID.Should().Be(chipId);
+			returnedChip.ChipInfo.Should().Be("VIP Access");
 		}
 
 		/// <summary>
@@ -48,13 +58,15 @@ namespace UnitTests.Controllers
 		public async Task GetChip_WhenNotFound_ReturnsNotFound()
 		{
 			// Arrange
-			_chipServiceMock.Setup(s => s.GetChipByIdAsync(999)).ReturnsAsync((Chip)null);
+			var chipId = 999;
+			_chipServiceMock.Setup(s => s.GetChipByIdAsync(chipId))
+						   .ReturnsAsync((Chip)null);
 
 			// Act
-			var result = await _controller.GetChip(999);
+			var result = await _controller.GetChip(chipId);
 
 			// Assert
-			Assert.IsType<NotFoundResult>(result.Result);
+			result.Result.Should().BeOfType<NotFoundResult>();
 		}
 
 		/// <summary>
@@ -64,16 +76,27 @@ namespace UnitTests.Controllers
 		public async Task GetAllChips_ReturnsOkWithList()
 		{
 			// Arrange
-			var chips = new List<Chip> { new Chip { ChipID = 1 }, new Chip { ChipID = 2 } };
-			_chipServiceMock.Setup(s => s.GetAllChipsAsync()).ReturnsAsync(chips);
+			var chips = new List<Chip>
+			{
+				new Chip { ChipID = 1, MemberID = 101, ChipInfo = "VIP Access", IsActive = true },
+				new Chip { ChipID = 2, MemberID = 102, ChipInfo = "Basic Access", IsActive = false }
+			};
+			_chipServiceMock.Setup(s => s.GetAllChipsAsync())
+						   .ReturnsAsync(chips);
 
 			// Act
 			var result = await _controller.GetAllChips();
 
 			// Assert
-			var okResult = Assert.IsType<OkObjectResult>(result.Result);
-			var returnedList = Assert.IsType<List<Chip>>(okResult.Value);
-			returnedList.Count.Should().Be(2);
+			var okResult = result.Result as OkObjectResult;
+			okResult.Should().NotBeNull();
+			okResult.StatusCode.Should().Be(200);
+
+			var returnedChips = okResult.Value as List<Chip>;
+			returnedChips.Should().NotBeNull();
+			returnedChips.Count.Should().Be(2);
+			returnedChips.Should().Contain(c => c.ChipID == 1);
+			returnedChips.Should().Contain(c => c.ChipID == 2);
 		}
 
 		/// <summary>
@@ -83,194 +106,249 @@ namespace UnitTests.Controllers
 		public async Task AddChip_ReturnsCreatedAtAction()
 		{
 			// Arrange
-			var newChip = new Chip { ChipID = 5 };
-			_chipServiceMock.Setup(s => s.AddChipAsync(newChip)).Returns(Task.CompletedTask);
+			var newChip = new Chip { MemberID = 103, ChipInfo = "Standard Access", IsActive = true };
+			var createdChip = new Chip { ChipID = 5, MemberID = 103, ChipInfo = "Standard Access", IsActive = true };
+
+			_chipServiceMock.Setup(s => s.AddChipAsync(It.IsAny<Chip>()))
+						   .Callback<Chip>(c => c.ChipID = 5)
+						   .Returns(Task.CompletedTask);
+			_chipServiceMock.Setup(s => s.GetChipByIdAsync(5))
+						   .ReturnsAsync(createdChip);
 
 			// Act
 			var result = await _controller.AddChip(newChip);
 
 			// Assert
-			var createdResult = Assert.IsType<CreatedAtActionResult>(result.Result);
-			createdResult.RouteValues["id"].Should().Be(5);
-			createdResult.Value.Should().Be(newChip);
+			var createdAtActionResult = result.Result as CreatedAtActionResult;
+			createdAtActionResult.Should().NotBeNull();
+			createdAtActionResult.StatusCode.Should().Be(201);
+			createdAtActionResult.ActionName.Should().Be(nameof(_controller.GetChip));
+			createdAtActionResult.RouteValues["id"].Should().Be(5);
+			createdAtActionResult.Value.Should().BeEquivalentTo(createdChip);
 		}
 
 		/// <summary>
-		/// Tests that UpdateChip returns BadRequest if route ID and request.ChipID do not match.
+		/// Tests that UpdateChip returns BadRequest when the route ID does not match the request's ChipID.
 		/// </summary>
 		[Fact]
 		public async Task UpdateChip_WhenIdMismatch_ReturnsBadRequest()
 		{
 			// Arrange
-			var updateReq = new ChipUpdateRequest
+			var routeId = 999;
+			var updateRequest = new ChipUpdateRequest
 			{
 				ChipID = 10,
 				NewMemberID = 123
 			};
 
 			// Act
-			var result = await _controller.UpdateChip(999, updateReq);
+			var result = await _controller.UpdateChip(routeId, updateRequest);
 
 			// Assert
-			var badRequest = Assert.IsType<BadRequestObjectResult>(result);
-			badRequest.Value.Should().Be("Chip ID does not match the route ID.");
+			var badRequestResult = result as BadRequestObjectResult;
+			badRequestResult.Should().NotBeNull();
+			badRequestResult.StatusCode.Should().Be(400);
+			badRequestResult.Value.Should().Be("Chip ID does not match the route ID.");
 		}
 
 		/// <summary>
-		/// Tests that UpdateChip returns NotFound if no chip is found by the given ID.
+		/// Tests that UpdateChip returns NotFound when the chip to update does not exist.
 		/// </summary>
 		[Fact]
 		public async Task UpdateChip_WhenChipNotFound_ReturnsNotFound()
 		{
 			// Arrange
-			var updateReq = new ChipUpdateRequest
+			var chipId = 10;
+			var updateRequest = new ChipUpdateRequest
 			{
-				ChipID = 10,
+				ChipID = chipId,
 				NewMemberID = 123
 			};
 
-			_chipServiceMock.Setup(s => s.GetChipByIdAsync(10)).ReturnsAsync((Chip)null);
+			_chipServiceMock.Setup(s => s.GetChipByIdAsync(chipId))
+						   .ReturnsAsync((Chip)null);
 
 			// Act
-			var result = await _controller.UpdateChip(10, updateReq);
+			var result = await _controller.UpdateChip(chipId, updateRequest);
 
 			// Assert
-			Assert.IsType<NotFoundResult>(result);
+			result.Should().BeOfType<NotFoundResult>();
 		}
 
 		/// <summary>
-		/// Tests that UpdateChip returns Ok with the updated chip if successful.
+		/// Tests that UpdateChip returns Ok with the updated chip when the update is successful.
 		/// </summary>
 		[Fact]
 		public async Task UpdateChip_SuccessfulUpdate_ReturnsOk()
 		{
 			// Arrange
-			var existingChip = new Chip { ChipID = 10, MemberID = 50 };
-			_chipServiceMock.Setup(s => s.GetChipByIdAsync(10)).ReturnsAsync(existingChip);
-
-			var updateReq = new ChipUpdateRequest
+			var chipId = 10;
+			var existingChip = new Chip { ChipID = chipId, MemberID = 50, ChipInfo = "Standard Access", IsActive = true };
+			var updateRequest = new ChipUpdateRequest
 			{
-				ChipID = 10,
+				ChipID = chipId,
 				NewMemberID = 123
 			};
+			var updatedChip = new Chip { ChipID = chipId, MemberID = 123, ChipInfo = "Standard Access", IsActive = true };
+
+			_chipServiceMock.Setup(s => s.GetChipByIdAsync(chipId))
+						   .ReturnsAsync(existingChip);
+			_chipServiceMock.Setup(s => s.UpdateChipAsync(existingChip))
+						   .Returns(Task.CompletedTask);
+			_chipServiceMock.Setup(s => s.GetChipByIdAsync(chipId))
+						   .ReturnsAsync(updatedChip);
 
 			// Act
-			var result = await _controller.UpdateChip(10, updateReq);
+			var result = await _controller.UpdateChip(chipId, updateRequest);
 
 			// Assert
-			var okResult = Assert.IsType<OkObjectResult>(result);
-			var updatedChip = Assert.IsType<Chip>(okResult.Value);
-			updatedChip.MemberID.Should().Be(123);
+			var okResult = result as OkObjectResult;
+			okResult.Should().NotBeNull();
+			okResult.StatusCode.Should().Be(200);
+			okResult.Value.Should().BeEquivalentTo(updatedChip);
 		}
 
 		/// <summary>
-		/// Tests that DeleteChip returns NotFound if the chip is not found.
+		/// Tests that DeleteChip returns NotFound when the chip does not exist.
 		/// </summary>
 		[Fact]
 		public async Task DeleteChip_WhenNotFound_ReturnsNotFound()
 		{
 			// Arrange
-			_chipServiceMock.Setup(s => s.GetChipByIdAsync(999)).ReturnsAsync((Chip)null);
+			var chipId = 999;
+			_chipServiceMock.Setup(s => s.GetChipByIdAsync(chipId))
+						   .ReturnsAsync((Chip)null);
 
 			// Act
-			var result = await _controller.DeleteChip(999);
+			var result = await _controller.DeleteChip(chipId);
 
 			// Assert
-			Assert.IsType<NotFoundResult>(result);
+			result.Should().BeOfType<NotFoundResult>();
 		}
 
 		/// <summary>
-		/// Tests that DeleteChip returns NoContent when deletion succeeds.
+		/// Tests that DeleteChip returns NoContent when the chip is successfully deleted.
 		/// </summary>
 		[Fact]
 		public async Task DeleteChip_WhenFound_ReturnsNoContent()
 		{
 			// Arrange
-			var chip = new Chip { ChipID = 10 };
-			_chipServiceMock.Setup(s => s.GetChipByIdAsync(10)).ReturnsAsync(chip);
+			var chipId = 10;
+			var existingChip = new Chip { ChipID = chipId, MemberID = 50, ChipInfo = "Standard Access", IsActive = true };
+
+			_chipServiceMock.Setup(s => s.GetChipByIdAsync(chipId))
+						   .ReturnsAsync(existingChip);
+			_chipServiceMock.Setup(s => s.DeleteChipAsync(chipId))
+						   .Returns(Task.CompletedTask);
 
 			// Act
-			var result = await _controller.DeleteChip(10);
+			var result = await _controller.DeleteChip(chipId);
 
 			// Assert
-			Assert.IsType<NoContentResult>(result);
+			result.Should().BeOfType<NoContentResult>();
 		}
 
 		/// <summary>
-		/// Tests that GetActiveChips returns Ok with a list of active chip DTOs.
+		/// Tests that GetActiveChips returns Ok with a list of active chips.
 		/// </summary>
 		[Fact]
-		public async Task GetActiveChips_ReturnsOkWithActiveDTOList()
+		public async Task GetActiveChips_ReturnsOkWithActiveList()
 		{
 			// Arrange
-			var active = new List<ActiveChipDTO>
+			var activeChips = new List<ActiveChipDTO>
 			{
-				new ActiveChipDTO { ChipID = 1, OwnerFullName = "Alice Smith", ChipInfo = "Chip Info" }
+				new ActiveChipDTO { ChipID = 1, OwnerFullName = "Alice Smith", ChipInfo = "VIP Access" }
 			};
-			_chipServiceMock.Setup(s => s.GetActiveChipsAsync()).ReturnsAsync(active);
+			_chipServiceMock.Setup(s => s.GetActiveChipsAsync())
+						   .ReturnsAsync(activeChips);
 
 			// Act
 			var result = await _controller.GetActiveChips();
 
 			// Assert
-			var okResult = Assert.IsType<OkObjectResult>(result);
-			var list = Assert.IsType<List<ActiveChipDTO>>(okResult.Value);
-			list.Should().HaveCount(1);
+			var okResult = result as OkObjectResult;
+			okResult.Should().NotBeNull();
+			okResult.StatusCode.Should().Be(200);
+
+			var returnedChips = okResult.Value as List<ActiveChipDTO>;
+			returnedChips.Should().NotBeNull();
+			returnedChips.Count.Should().Be(1);
+			returnedChips[0].ChipID.Should().Be(1);
+			returnedChips[0].OwnerFullName.Should().Be("Alice Smith");
+			returnedChips[0].ChipInfo.Should().Be("VIP Access");
 		}
 
 		/// <summary>
-		/// Tests that GetInactiveChips returns Ok with a list of inactive chip DTOs.
+		/// Tests that GetInactiveChips returns Ok with a list of inactive chips.
 		/// </summary>
 		[Fact]
-		public async Task GetInactiveChips_ReturnsOkWithInactiveDTOList()
+		public async Task GetInactiveChips_ReturnsOkWithInactiveList()
 		{
 			// Arrange
-			var inactive = new List<InactiveChipDTO>
+			var inactiveChips = new List<InactiveChipDTO>
 			{
-				new InactiveChipDTO { ChipID = 2, OwnerFullName = "Bob Jones", ChipInfo = "Some Info" }
+				new InactiveChipDTO { ChipID = 2, OwnerFullName = "Bob Jones", ChipInfo = "Basic Access" }
 			};
-			_chipServiceMock.Setup(s => s.GetInactiveChipsAsync()).ReturnsAsync(inactive);
+			_chipServiceMock.Setup(s => s.GetInactiveChipsAsync())
+						   .ReturnsAsync(inactiveChips);
 
 			// Act
 			var result = await _controller.GetInactiveChips();
 
 			// Assert
-			var okResult = Assert.IsType<OkObjectResult>(result);
-			var list = Assert.IsType<List<InactiveChipDTO>>(okResult.Value);
-			list.Should().HaveCount(1);
+			var okResult = result as OkObjectResult;
+			okResult.Should().NotBeNull();
+			okResult.StatusCode.Should().Be(200);
+
+			var returnedChips = okResult.Value as List<InactiveChipDTO>;
+			returnedChips.Should().NotBeNull();
+			returnedChips.Count.Should().Be(1);
+			returnedChips[0].ChipID.Should().Be(2);
+			returnedChips[0].OwnerFullName.Should().Be("Bob Jones");
+			returnedChips[0].ChipInfo.Should().Be("Basic Access");
 		}
 
 		/// <summary>
-		/// Tests that GetChipInfoByMemberId returns NotFound if no chip info is found.
+		/// Tests that GetChipInfoByMemberId returns NotFound when no chip info is found.
 		/// </summary>
 		[Fact]
 		public async Task GetChipInfoByMemberId_WhenNull_ReturnsNotFound()
 		{
 			// Arrange
-			_chipServiceMock.Setup(s => s.GetChipInfoByMemberIdAsync(999)).ReturnsAsync((string)null);
+			var memberId = 999;
+			_chipServiceMock.Setup(s => s.GetChipInfoByMemberIdAsync(memberId))
+						   .ReturnsAsync((string)null);
 
 			// Act
-			var result = await _controller.GetChipInfoByMemberId(999);
+			var result = await _controller.GetChipInfoByMemberId(memberId);
 
 			// Assert
-			Assert.IsType<NotFoundObjectResult>(result.Result);
+			var notFoundResult = result.Result as NotFoundObjectResult;
+			notFoundResult.Should().NotBeNull();
+			notFoundResult.StatusCode.Should().Be(404);
+			notFoundResult.Value.Should().Be($"No chip found for member with ID {memberId}.");
 		}
 
 		/// <summary>
-		/// Tests that GetChipInfoByMemberId returns Ok with the chip info if found.
+		/// Tests that GetChipInfoByMemberId returns Ok with chip info when found.
 		/// </summary>
 		[Fact]
 		public async Task GetChipInfoByMemberId_WhenFound_ReturnsOk()
 		{
 			// Arrange
-			_chipServiceMock.Setup(s => s.GetChipInfoByMemberIdAsync(100)).ReturnsAsync("VIP Access");
+			var memberId = 100;
+			var chipInfo = "VIP Access";
+			_chipServiceMock.Setup(s => s.GetChipInfoByMemberIdAsync(memberId))
+						   .ReturnsAsync(chipInfo);
 
 			// Act
-			var result = await _controller.GetChipInfoByMemberId(100);
+			var result = await _controller.GetChipInfoByMemberId(memberId);
 
 			// Assert
-			var okResult = Assert.IsType<OkObjectResult>(result.Result);
-			okResult.Value.Should().Be("VIP Access");
+			var okResult = result.Result as OkObjectResult;
+			okResult.Should().NotBeNull();
+			okResult.StatusCode.Should().Be(200);
+			okResult.Value.Should().Be(chipInfo);
 		}
 	}
 }

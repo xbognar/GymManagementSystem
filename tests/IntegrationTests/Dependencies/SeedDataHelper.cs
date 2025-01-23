@@ -1,8 +1,6 @@
 ﻿using GymDBAccess.DataAccess;
 using GymDBAccess.Models;
 using System;
-using System.Collections.Generic;
-using System.Linq;
 
 namespace IntegrationTests.Dependencies
 {
@@ -13,10 +11,7 @@ namespace IntegrationTests.Dependencies
 	{
 		public static void Seed(ApplicationDbContext db)
 		{
-			// If there's data already, skip
-			if (db.Members.Any()) return;
 
-			// 1) Seed Members
 			var memberAlice = new Member
 			{
 				MemberID = 101,
@@ -35,7 +30,6 @@ namespace IntegrationTests.Dependencies
 			};
 			db.Members.AddRange(memberAlice, memberBob);
 
-			// 2) Seed Memberships
 			var membership1 = new Membership
 			{
 				MembershipID = 201,
@@ -56,7 +50,6 @@ namespace IntegrationTests.Dependencies
 			};
 			db.Memberships.AddRange(membership1, membership2);
 
-			// 3) Seed Chips
 			var chip1 = new Chip
 			{
 				ChipID = 301,

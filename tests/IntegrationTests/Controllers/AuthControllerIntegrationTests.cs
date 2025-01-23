@@ -5,18 +5,45 @@ using System.Net.Http.Json;
 using System.Threading.Tasks;
 using IntegrationTests.Dependencies;
 using GymDBAccess.Models;
-using Microsoft.AspNetCore.Mvc.Testing;
+using System.Collections.Generic;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace IntegrationTests.Controllers
 {
-	public class AuthControllerIntegrationTests : IClassFixture<IntegrationTestFixture>
+	/// <summary>
+	/// Integration tests for the AuthController endpoints.
+	/// Ensures each test runs with a fresh and consistent database state.
+	/// </summary>
+	public class AuthControllerIntegrationTests : IClassFixture<IntegrationTestFixture>, IAsyncLifetime
 	{
 		private readonly HttpClient _client;
+		private readonly IntegrationTestFixture _fixture;
 
 		public AuthControllerIntegrationTests(IntegrationTestFixture fixture)
 		{
+			_fixture = fixture;
 			_client = fixture.CreateClient();
 		}
+
+		/// <summary>
+		/// Resets and reseeds the database before each test.
+		/// </summary>
+		public async Task InitializeAsync()
+		{
+			using var scope = _fixture.Services.CreateScope();
+			var db = scope.ServiceProvider.GetRequiredService<GymDBAccess.DataAccess.ApplicationDbContext>();
+
+			// Clear existing data 
+			db.Chips.RemoveRange(db.Chips);
+			db.Memberships.RemoveRange(db.Memberships);
+			db.Members.RemoveRange(db.Members);
+			await db.SaveChangesAsync();
+
+			// Reseed the database
+			IntegrationTests.Dependencies.SeedDataHelper.Seed(db);
+		}
+
+		public Task DisposeAsync() => Task.CompletedTask;
 
 		/// <summary>
 		/// Tests that valid credentials return an OK response with a Token property.
@@ -24,18 +51,25 @@ namespace IntegrationTests.Controllers
 		[Fact]
 		public async Task Login_ValidCredentials_ReturnsOkAndToken()
 		{
-			// Act
+			// ARRANGE
 			var loginModel = new LoginModel
 			{
-				Username = System.Environment.GetEnvironmentVariable("LOGIN_USERNAME") ?? "testUser",
-				Password = System.Environment.GetEnvironmentVariable("LOGIN_PASSWORD") ?? "testPass"
+				Username = "testUser",
+				Password = "testPass"
 			};
 
+			// ACT
 			var response = await _client.PostAsJsonAsync("/api/auth/login", loginModel);
+
+			// ASSERT
 			response.StatusCode.Should().Be(HttpStatusCode.OK);
 
-			var json = await response.Content.ReadFromJsonAsync<dynamic>();
-			json.Token.Should().NotBeNullOrEmpty();
+			// Read as a dictionary
+			var dict = await response.Content.ReadFromJsonAsync<Dictionary<string, string>>();
+			dict.Should().NotBeNull();
+			dict.Should().ContainKey("token");
+			var token = dict["token"];
+			token.Should().NotBeNullOrEmpty();
 		}
 
 		/// <summary>
@@ -44,17 +78,18 @@ namespace IntegrationTests.Controllers
 		[Fact]
 		public async Task Login_InvalidCredentials_ReturnsUnauthorized()
 		{
-			// Arrange
+			// ARRANGE
 			var loginModel = new LoginModel
 			{
 				Username = "wrongUser",
 				Password = "wrongPass"
 			};
 
-			// Act
+			// ACT
 			var response = await _client.PostAsJsonAsync("/api/auth/login", loginModel);
-			response.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
 
+			// ASSERT
+			response.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
 			var message = await response.Content.ReadAsStringAsync();
 			message.Should().Contain("Invalid credentials");
 		}

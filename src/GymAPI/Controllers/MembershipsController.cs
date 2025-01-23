@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 using GymDBAccess.DTOs;
 using Microsoft.AspNetCore.Authorization;
 
-namespace GymDBAccess.Controllers
+namespace GymAPI.Controllers
 {
 	[Authorize]
 	[ApiController]

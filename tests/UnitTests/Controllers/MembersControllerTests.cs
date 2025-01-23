@@ -2,7 +2,7 @@
 using FluentAssertions;
 using Moq;
 using Microsoft.AspNetCore.Mvc;
-using GymDBAccess.Controllers;
+using GymAPI.Controllers;
 using GymDBAccess.Models;
 using GymDBAccess.Services.Interfaces;
 using System.Collections.Generic;
@@ -10,6 +10,9 @@ using System.Threading.Tasks;
 
 namespace UnitTests.Controllers
 {
+	/// <summary>
+	/// Unit tests for the MembersController.
+	/// </summary>
 	public class MembersControllerTests
 	{
 		private readonly Mock<IMemberService> _memberServiceMock;
@@ -28,15 +31,20 @@ namespace UnitTests.Controllers
 		public async Task GetMember_WhenFound_ReturnsOk()
 		{
 			// Arrange
-			var member = new Member { MemberID = 10, FirstName = "John" };
-			_memberServiceMock.Setup(s => s.GetMemberByIdAsync(10)).ReturnsAsync(member);
+			var memberId = 10;
+			var member = new Member { MemberID = memberId, FirstName = "John", LastName = "Doe" };
+			_memberServiceMock.Setup(s => s.GetMemberByIdAsync(memberId))
+							  .ReturnsAsync(member);
 
 			// Act
-			var result = await _controller.GetMember(10);
+			var result = await _controller.GetMember(memberId);
 
 			// Assert
-			var okResult = Assert.IsType<Member>(result.Value);
-			okResult.MemberID.Should().Be(10);
+			var okResult = result.Value as Member;
+			okResult.Should().NotBeNull();
+			okResult.MemberID.Should().Be(memberId);
+			okResult.FirstName.Should().Be("John");
+			okResult.LastName.Should().Be("Doe");
 		}
 
 		/// <summary>
@@ -46,13 +54,15 @@ namespace UnitTests.Controllers
 		public async Task GetMember_WhenNotFound_ReturnsNotFound()
 		{
 			// Arrange
-			_memberServiceMock.Setup(s => s.GetMemberByIdAsync(999)).ReturnsAsync((Member)null);
+			var memberId = 999;
+			_memberServiceMock.Setup(s => s.GetMemberByIdAsync(memberId))
+							  .ReturnsAsync((Member)null);
 
 			// Act
-			var result = await _controller.GetMember(999);
+			var result = await _controller.GetMember(memberId);
 
 			// Assert
-			Assert.IsType<NotFoundResult>(result.Result);
+			result.Result.Should().BeOfType<NotFoundResult>();
 		}
 
 		/// <summary>
@@ -62,16 +72,27 @@ namespace UnitTests.Controllers
 		public async Task GetAllMembers_ReturnsOkWithList()
 		{
 			// Arrange
-			var members = new List<Member> { new Member(), new Member() };
-			_memberServiceMock.Setup(s => s.GetAllMembersAsync()).ReturnsAsync(members);
+			var members = new List<Member>
+			{
+				new Member { MemberID = 1, FirstName = "Alice", LastName = "Smith" },
+				new Member { MemberID = 2, FirstName = "Bob", LastName = "Johnson" }
+			};
+			_memberServiceMock.Setup(s => s.GetAllMembersAsync())
+							  .ReturnsAsync(members);
 
 			// Act
 			var result = await _controller.GetAllMembers();
 
 			// Assert
-			var okResult = Assert.IsType<OkObjectResult>(result.Result);
-			var returnedList = Assert.IsType<List<Member>>(okResult.Value);
-			returnedList.Count.Should().Be(2);
+			var okResult = result.Result as OkObjectResult;
+			okResult.Should().NotBeNull();
+			okResult.StatusCode.Should().Be(200);
+
+			var returnedMembers = okResult.Value as List<Member>;
+			returnedMembers.Should().NotBeNull();
+			returnedMembers.Count.Should().Be(2);
+			returnedMembers.Should().Contain(m => m.MemberID == 1);
+			returnedMembers.Should().Contain(m => m.MemberID == 2);
 		}
 
 		/// <summary>
@@ -81,115 +102,145 @@ namespace UnitTests.Controllers
 		public async Task AddMember_ReturnsCreatedAtAction()
 		{
 			// Arrange
-			var newMember = new Member { MemberID = 3 };
-			_memberServiceMock.Setup(s => s.AddMemberAsync(newMember)).Returns(Task.CompletedTask);
+			var newMember = new Member { FirstName = "Testy", LastName = "McTestFace" };
+			var createdMember = new Member { MemberID = 3, FirstName = "Testy", LastName = "McTestFace" };
+
+			_memberServiceMock.Setup(s => s.AddMemberAsync(It.IsAny<Member>()))
+							  .Callback<Member>(m => m.MemberID = 3)
+							  .Returns(Task.CompletedTask);
+			_memberServiceMock.Setup(s => s.GetMemberByIdAsync(3))
+							  .ReturnsAsync(createdMember);
 
 			// Act
 			var result = await _controller.AddMember(newMember);
 
 			// Assert
-			var createdResult = Assert.IsType<CreatedAtActionResult>(result.Result);
-			createdResult.RouteValues["id"].Should().Be(3);
-			createdResult.Value.Should().Be(newMember);
+			var createdAtActionResult = result.Result as CreatedAtActionResult;
+			createdAtActionResult.Should().NotBeNull();
+			createdAtActionResult.StatusCode.Should().Be(201);
+			createdAtActionResult.ActionName.Should().Be(nameof(_controller.GetMember));
+			createdAtActionResult.RouteValues["id"].Should().Be(3);
+			createdAtActionResult.Value.Should().BeEquivalentTo(createdMember);
 		}
 
 		/// <summary>
-		/// Tests that UpdateMember returns NoContent when the ID matches.
+		/// Tests that UpdateMember returns NoContent when the update is successful.
 		/// </summary>
 		[Fact]
 		public async Task UpdateMember_WhenIdMatches_ReturnsNoContent()
 		{
 			// Arrange
-			var member = new Member { MemberID = 2 };
-			_memberServiceMock.Setup(s => s.UpdateMemberAsync(member)).Returns(Task.CompletedTask);
+			var memberId = 2;
+			var updatedMember = new Member { MemberID = memberId, FirstName = "Bob", LastName = "Updated" };
+
+			_memberServiceMock.Setup(s => s.UpdateMemberAsync(updatedMember))
+							  .Returns(Task.CompletedTask);
 
 			// Act
-			var result = await _controller.UpdateMember(2, member);
+			var result = await _controller.UpdateMember(memberId, updatedMember);
 
 			// Assert
-			Assert.IsType<NoContentResult>(result);
+			result.Should().BeOfType<NoContentResult>();
 		}
 
 		/// <summary>
-		/// Tests that UpdateMember returns BadRequest if the route ID does not match the member's ID.
+		/// Tests that UpdateMember returns BadRequest when the route ID does not match the member's ID.
 		/// </summary>
 		[Fact]
 		public async Task UpdateMember_WhenIdMismatch_ReturnsBadRequest()
 		{
 			// Arrange
-			var member = new Member { MemberID = 2 };
+			var routeId = 999;
+			var updatedMember = new Member { MemberID = 2, FirstName = "Bob", LastName = "Mismatch" };
 
 			// Act
-			var result = await _controller.UpdateMember(999, member);
+			var result = await _controller.UpdateMember(routeId, updatedMember);
 
 			// Assert
-			Assert.IsType<BadRequestResult>(result);
+			result.Should().BeOfType<BadRequestResult>();
 		}
 
 		/// <summary>
-		/// Tests that DeleteMember returns NoContent when deletion succeeds.
+		/// Tests that DeleteMember returns NoContent when the member is successfully deleted.
 		/// </summary>
 		[Fact]
 		public async Task DeleteMember_WhenFound_ReturnsNoContent()
 		{
 			// Arrange
-			var existing = new Member { MemberID = 5 };
-			_memberServiceMock.Setup(s => s.GetMemberByIdAsync(5)).ReturnsAsync(existing);
+			var memberId = 5;
+			var existingMember = new Member { MemberID = memberId, FirstName = "Charlie", LastName = "Brown" };
+
+			_memberServiceMock.Setup(s => s.GetMemberByIdAsync(memberId))
+							  .ReturnsAsync(existingMember);
+			_memberServiceMock.Setup(s => s.DeleteMemberAsync(memberId))
+							  .Returns(Task.CompletedTask);
 
 			// Act
-			var result = await _controller.DeleteMember(5);
+			var result = await _controller.DeleteMember(memberId);
 
 			// Assert
-			Assert.IsType<NoContentResult>(result);
+			result.Should().BeOfType<NoContentResult>();
 		}
 
 		/// <summary>
-		/// Tests that DeleteMember returns NotFound if the member does not exist.
+		/// Tests that DeleteMember returns NotFound when the member does not exist.
 		/// </summary>
 		[Fact]
 		public async Task DeleteMember_WhenNotFound_ReturnsNotFound()
 		{
 			// Arrange
-			_memberServiceMock.Setup(s => s.GetMemberByIdAsync(999)).ReturnsAsync((Member)null);
+			var memberId = 999;
+			_memberServiceMock.Setup(s => s.GetMemberByIdAsync(memberId))
+							  .ReturnsAsync((Member)null);
 
 			// Act
-			var result = await _controller.DeleteMember(999);
+			var result = await _controller.DeleteMember(memberId);
 
 			// Assert
-			Assert.IsType<NotFoundResult>(result);
+			result.Should().BeOfType<NotFoundResult>();
 		}
 
 		/// <summary>
-		/// Tests that GetMemberIdByName returns Ok with the member ID if found.
+		/// Tests that GetMemberIdByName returns Ok with the member ID when a match is found.
 		/// </summary>
 		[Fact]
 		public async Task GetMemberIdByName_WhenMatchFound_ReturnsOk()
 		{
 			// Arrange
-			_memberServiceMock.Setup(s => s.GetMemberIdByNameAsync("John Doe")).ReturnsAsync(10);
+			var fullName = "John Doe";
+			var memberId = 10;
+			_memberServiceMock.Setup(s => s.GetMemberIdByNameAsync(fullName))
+							  .ReturnsAsync(memberId);
 
 			// Act
-			var result = await _controller.GetMemberIdByName("John Doe");
+			var result = await _controller.GetMemberIdByName(fullName);
 
 			// Assert
-			var okResult = Assert.IsType<OkObjectResult>(result.Result);
-			(okResult.Value as int?).Should().Be(10);
+			var okResult = result.Result as OkObjectResult;
+			okResult.Should().NotBeNull();
+			okResult.StatusCode.Should().Be(200);
+			okResult.Value.Should().Be(memberId);
 		}
 
 		/// <summary>
-		/// Tests that GetMemberIdByName returns NotFound if not found.
+		/// Tests that GetMemberIdByName returns NotFound when no match is found.
 		/// </summary>
 		[Fact]
 		public async Task GetMemberIdByName_WhenNoMatch_ReturnsNotFound()
 		{
 			// Arrange
-			_memberServiceMock.Setup(s => s.GetMemberIdByNameAsync("Unknown Person")).ReturnsAsync((int?)null);
+			var fullName = "Unknown Person";
+			_memberServiceMock.Setup(s => s.GetMemberIdByNameAsync(fullName))
+							  .ReturnsAsync((int?)null);
 
 			// Act
-			var result = await _controller.GetMemberIdByName("Unknown Person");
+			var result = await _controller.GetMemberIdByName(fullName);
 
 			// Assert
-			Assert.IsType<NotFoundObjectResult>(result.Result);
+			var notFoundResult = result.Result as NotFoundObjectResult;
+			notFoundResult.Should().NotBeNull();
+			notFoundResult.StatusCode.Should().Be(404);
+			notFoundResult.Value.Should().Be("Member not found or full name format is incorrect.");
 		}
 	}
 }

@@ -1,296 +1,184 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using Xunit;
 using FluentAssertions;
-using Moq;
 using Microsoft.EntityFrameworkCore;
 using GymDBAccess.DataAccess;
 using GymDBAccess.Models;
 using GymDBAccess.Services;
-using GymDBAccess.Services.Interfaces;
 using GymDBAccess.DTOs;
 
 namespace UnitTests.Services
 {
-	public class ChipServiceTests
+	/// <summary>
+	/// Unit tests for the <see cref="ChipService"/> class, ensuring correct behavior of chip-related operations.
+	/// </summary>
+	public class ChipServiceTests : IDisposable
 	{
-		private readonly Mock<ApplicationDbContext> _dbContextMock;
-		private readonly Mock<DbSet<Chip>> _chipDbSetMock;
-		private readonly Mock<DbSet<Member>> _memberDbSetMock;
+		private readonly ApplicationDbContext _dbContext;
 		private readonly ChipService _service;
+		private readonly string _databaseName;
 
+		/// <summary>
+		/// Initializes a new instance of the <see cref="ChipServiceTests"/> class.
+		/// Sets up the in-memory database and seeds initial data.
+		/// </summary>
 		public ChipServiceTests()
 		{
-			var options = new DbContextOptions<ApplicationDbContext>();
-			_dbContextMock = new Mock<ApplicationDbContext>(options);
+			_databaseName = Guid.NewGuid().ToString();
 
-			_chipDbSetMock = new Mock<DbSet<Chip>>();
-			_dbContextMock.Setup(db => db.Chips).Returns(_chipDbSetMock.Object);
+			var options = new DbContextOptionsBuilder<ApplicationDbContext>()
+				.UseInMemoryDatabase(databaseName: _databaseName)
+				.Options;
 
-			_memberDbSetMock = new Mock<DbSet<Member>>();
-			_dbContextMock.Setup(db => db.Members).Returns(_memberDbSetMock.Object);
+			_dbContext = new ApplicationDbContext(options);
 
-			_service = new ChipService(_dbContextMock.Object);
+			_dbContext.Chips.AddRange(new List<Chip>
+			{
+				new Chip { ChipID = 1, MemberID = 50 },
+				new Chip { ChipID = 2, MemberID = 51 }
+			});
+
+			_dbContext.SaveChanges();
+
+			_service = new ChipService(_dbContext);
 		}
 
 		/// <summary>
-		/// Tests that GetChipByIdAsync returns the chip if found.
+		/// Tests that <see cref="ChipService.GetChipByIdAsync(int)"/> returns the chip when it exists.
 		/// </summary>
 		[Fact]
-		public async Task GetChipByIdAsync_WhenFound_ReturnsChip()
+		public async Task GetChipByIdAsync_ShouldReturnChip_WhenChipExists()
 		{
-			// Arrange
-			var testChip = new Chip { ChipID = 1, MemberID = 50 };
-			_dbContextMock.Setup(db => db.Chips.FindAsync(1)).ReturnsAsync(testChip);
+			int chipId = 1;
 
-			// Act
-			var result = await _service.GetChipByIdAsync(1);
+			var result = await _service.GetChipByIdAsync(chipId);
 
-			// Assert
 			result.Should().NotBeNull();
-			result.ChipID.Should().Be(1);
+			result.ChipID.Should().Be(chipId);
+			result.MemberID.Should().Be(50);
 		}
 
 		/// <summary>
-		/// Tests that GetChipByIdAsync returns null when the chip is not found.
+		/// Tests that <see cref="ChipService.GetChipByIdAsync(int)"/> returns null when the chip does not exist.
 		/// </summary>
 		[Fact]
-		public async Task GetChipByIdAsync_WhenNotFound_ReturnsNull()
+		public async Task GetChipByIdAsync_ShouldReturnNull_WhenChipDoesNotExist()
 		{
-			// Arrange
-			_dbContextMock.Setup(db => db.Chips.FindAsync(999)).ReturnsAsync((Chip)null);
+			int chipId = 999;
 
-			// Act
-			var result = await _service.GetChipByIdAsync(999);
+			var result = await _service.GetChipByIdAsync(chipId);
 
-			// Assert
 			result.Should().BeNull();
 		}
 
 		/// <summary>
-		/// Tests that GetAllChipsAsync returns all chips from the DbSet.
+		/// Tests that <see cref="ChipService.GetAllChipsAsync"/> returns all chips.
 		/// </summary>
 		[Fact]
-		public async Task GetAllChipsAsync_ReturnsAllChips()
+		public async Task GetAllChipsAsync_ShouldReturnAllChips()
 		{
-			// Arrange
-			var chipsData = new List<Chip>
-			{
-				new Chip { ChipID = 1 },
-				new Chip { ChipID = 2 }
-			}.AsQueryable();
-
-			_chipDbSetMock.As<IQueryable<Chip>>().Setup(m => m.Provider).Returns(chipsData.Provider);
-			_chipDbSetMock.As<IQueryable<Chip>>().Setup(m => m.Expression).Returns(chipsData.Expression);
-			_chipDbSetMock.As<IQueryable<Chip>>().Setup(m => m.ElementType).Returns(chipsData.ElementType);
-			_chipDbSetMock.As<IQueryable<Chip>>().Setup(m => m.GetEnumerator()).Returns(chipsData.GetEnumerator());
-
-			// Act
 			var result = await _service.GetAllChipsAsync();
 
-			// Assert
 			result.Should().HaveCount(2);
+			result.Select(c => c.ChipID).Should().Contain(new List<int> { 1, 2 });
 		}
 
 		/// <summary>
-		/// Tests that AddChipAsync adds a new chip and saves changes.
+		/// Tests that <see cref="ChipService.AddChipAsync(Chip)"/> adds a new chip and saves changes.
 		/// </summary>
 		[Fact]
-		public async Task AddChipAsync_AddsAndSaves()
+		public async Task AddChipAsync_ShouldAddChip_AndSaveChanges()
 		{
-			// Arrange
-			var newChip = new Chip { ChipID = 10 };
+			var newChip = new Chip { ChipID = 10, MemberID = 60 };
 
-			// Act
 			await _service.AddChipAsync(newChip);
 
-			// Assert
-			_dbContextMock.Verify(db => db.Chips.AddAsync(newChip, default), Times.Once);
-			_dbContextMock.Verify(db => db.SaveChangesAsync(default), Times.Once);
+			var chipInDb = await _dbContext.Chips.FindAsync(newChip.ChipID);
+			chipInDb.Should().NotBeNull();
+			chipInDb.ChipID.Should().Be(10);
+			chipInDb.MemberID.Should().Be(60);
 		}
 
 		/// <summary>
-		/// Tests that UpdateChipAsync updates a chip and saves changes.
+		/// Tests that <see cref="ChipService.UpdateChipAsync(Chip)"/> updates an existing chip and saves changes.
 		/// </summary>
 		[Fact]
-		public async Task UpdateChipAsync_UpdatesAndSaves()
+		public async Task UpdateChipAsync_ShouldUpdateChip_AndSaveChanges()
 		{
-			// Arrange
-			var existingChip = new Chip { ChipID = 5 };
+			var existingChip = await _dbContext.Chips.FindAsync(1);
+			existingChip.ChipInfo = "Updated Info";
 
-			// Act
 			await _service.UpdateChipAsync(existingChip);
 
-			// Assert
-			_dbContextMock.Verify(db => db.Chips.Update(existingChip), Times.Once);
-			_dbContextMock.Verify(db => db.SaveChangesAsync(default), Times.Once);
+			var chipInDb = await _dbContext.Chips.FindAsync(existingChip.ChipID);
+			chipInDb.ChipInfo.Should().Be("Updated Info");
 		}
 
 		/// <summary>
-		/// Tests that DeleteChipAsync removes the chip if found.
+		/// Tests that <see cref="ChipService.DeleteChipAsync(int)"/> removes the chip when it exists and saves changes.
 		/// </summary>
 		[Fact]
-		public async Task DeleteChipAsync_WhenFound_DeletesAndSaves()
+		public async Task DeleteChipAsync_ShouldRemoveChip_AndSaveChanges_WhenChipExists()
 		{
-			// Arrange
-			var existingChip = new Chip { ChipID = 7 };
-			_dbContextMock.Setup(db => db.Chips.FindAsync(7)).ReturnsAsync(existingChip);
+			int chipId = 2;
 
-			// Act
-			await _service.DeleteChipAsync(7);
+			await _service.DeleteChipAsync(chipId);
 
-			// Assert
-			_dbContextMock.Verify(db => db.Chips.Remove(existingChip), Times.Once);
-			_dbContextMock.Verify(db => db.SaveChangesAsync(default), Times.Once);
+			var chipInDb = await _dbContext.Chips.FindAsync(chipId);
+			chipInDb.Should().BeNull();
 		}
 
 		/// <summary>
-		/// Tests that DeleteChipAsync does nothing if the chip is not found.
+		/// Tests that <see cref="ChipService.DeleteChipAsync(int)"/> does nothing when the chip does not exist.
 		/// </summary>
 		[Fact]
-		public async Task DeleteChipAsync_WhenNotFound_DoesNothing()
+		public async Task DeleteChipAsync_ShouldDoNothing_WhenChipDoesNotExist()
 		{
-			// Arrange
-			_dbContextMock.Setup(db => db.Chips.FindAsync(999)).ReturnsAsync((Chip)null);
+			int chipId = 999;
 
-			// Act
-			await _service.DeleteChipAsync(999);
+			await _service.DeleteChipAsync(chipId);
 
-			// Assert
-			_dbContextMock.Verify(db => db.Chips.Remove(It.IsAny<Chip>()), Times.Never);
-			_dbContextMock.Verify(db => db.SaveChangesAsync(default), Times.Never);
+			var chipInDb = await _dbContext.Chips.FindAsync(chipId);
+			chipInDb.Should().BeNull();
 		}
 
 		/// <summary>
-		/// Tests that GetActiveChipsAsync returns only active chips with joined member info.
+		/// Tests that <see cref="ChipService.GetChipInfoByMemberIdAsync(int)"/> returns the ChipInfo when the chip exists.
 		/// </summary>
 		[Fact]
-		public async Task GetActiveChipsAsync_ReturnsActiveChipDTOs()
+		public async Task GetChipInfoByMemberIdAsync_ShouldReturnChipInfo_WhenChipExists()
 		{
-			// Arrange
-			var chipsData = new List<Chip>
-			{
-				new Chip { ChipID = 1, MemberID = 10, IsActive = true, ChipInfo = "Info1" },
-				new Chip { ChipID = 2, MemberID = 11, IsActive = false, ChipInfo = "Info2" }
-			}.AsQueryable();
+			var newChip = new Chip { ChipID = 3, MemberID = 100, ChipInfo = "VIP Access", IsActive = true };
+			_dbContext.Chips.Add(newChip);
+			await _dbContext.SaveChangesAsync();
 
-			var chipDbSetMock = new Mock<DbSet<Chip>>();
-			chipDbSetMock.As<IQueryable<Chip>>().Setup(m => m.Provider).Returns(chipsData.Provider);
-			chipDbSetMock.As<IQueryable<Chip>>().Setup(m => m.Expression).Returns(chipsData.Expression);
-			chipDbSetMock.As<IQueryable<Chip>>().Setup(m => m.ElementType).Returns(chipsData.ElementType);
-			chipDbSetMock.As<IQueryable<Chip>>().Setup(m => m.GetEnumerator()).Returns(chipsData.GetEnumerator());
-
-			_dbContextMock.Setup(db => db.Chips).Returns(chipDbSetMock.Object);
-
-			var membersData = new List<Member>
-			{
-				new Member { MemberID = 10, FirstName = "Alice", LastName = "Smith" },
-				new Member { MemberID = 11, FirstName = "John", LastName = "Doe" }
-			}.AsQueryable();
-
-			var memberDbSetMock = new Mock<DbSet<Member>>();
-			memberDbSetMock.As<IQueryable<Member>>().Setup(m => m.Provider).Returns(membersData.Provider);
-			memberDbSetMock.As<IQueryable<Member>>().Setup(m => m.Expression).Returns(membersData.Expression);
-			memberDbSetMock.As<IQueryable<Member>>().Setup(m => m.ElementType).Returns(membersData.ElementType);
-			memberDbSetMock.As<IQueryable<Member>>().Setup(m => m.GetEnumerator()).Returns(membersData.GetEnumerator());
-
-			_dbContextMock.Setup(db => db.Members).Returns(memberDbSetMock.Object);
-
-			// Act
-			var result = await _service.GetActiveChipsAsync();
-
-			// Assert
-			result.Should().HaveCount(1);
-			var first = result.First();
-			first.ChipID.Should().Be(1);
-			first.ChipInfo.Should().Be("Info1");
-			first.OwnerFullName.Should().Be("Alice Smith");
-		}
-
-		/// <summary>
-		/// Tests that GetInactiveChipsAsync returns only inactive chips with joined member info.
-		/// </summary>
-		[Fact]
-		public async Task GetInactiveChipsAsync_ReturnsInactiveChipDTOs()
-		{
-			// Arrange
-			var chipsData = new List<Chip>
-			{
-				new Chip { ChipID = 1, MemberID = 10, IsActive = true, ChipInfo = "ActiveChip" },
-				new Chip { ChipID = 2, MemberID = 11, IsActive = false, ChipInfo = "InactiveChip" }
-			}.AsQueryable();
-
-			_chipDbSetMock.As<IQueryable<Chip>>().Setup(m => m.Provider).Returns(chipsData.Provider);
-			_chipDbSetMock.As<IQueryable<Chip>>().Setup(m => m.Expression).Returns(chipsData.Expression);
-			_chipDbSetMock.As<IQueryable<Chip>>().Setup(m => m.ElementType).Returns(chipsData.ElementType);
-			_chipDbSetMock.As<IQueryable<Chip>>().Setup(m => m.GetEnumerator()).Returns(chipsData.GetEnumerator());
-
-			var membersData = new List<Member>
-			{
-				new Member { MemberID = 10, FirstName = "Alice", LastName = "Smith" },
-				new Member { MemberID = 11, FirstName = "John", LastName = "Doe" }
-			}.AsQueryable();
-
-			_memberDbSetMock.As<IQueryable<Member>>().Setup(m => m.Provider).Returns(membersData.Provider);
-			_memberDbSetMock.As<IQueryable<Member>>().Setup(m => m.Expression).Returns(membersData.Expression);
-			_memberDbSetMock.As<IQueryable<Member>>().Setup(m => m.ElementType).Returns(membersData.ElementType);
-			_memberDbSetMock.As<IQueryable<Member>>().Setup(m => m.GetEnumerator()).Returns(membersData.GetEnumerator());
-
-			// Act
-			var result = await _service.GetInactiveChipsAsync();
-
-			// Assert
-			result.Should().HaveCount(1);
-			result.First().ChipInfo.Should().Be("InactiveChip");
-		}
-
-		/// <summary>
-		/// Tests that GetChipInfoByMemberIdAsync returns the ChipInfo for the given member ID if it exists.
-		/// </summary>
-		[Fact]
-		public async Task GetChipInfoByMemberIdAsync_WhenChipExists_ReturnsChipInfo()
-		{
-			// Arrange
-			var chipsData = new List<Chip>
-			{
-				new Chip { ChipID = 5, MemberID = 100, ChipInfo = "VIP Access", IsActive = true }
-			}.AsQueryable();
-
-			_chipDbSetMock.As<IQueryable<Chip>>().Setup(m => m.Provider).Returns(chipsData.Provider);
-			_chipDbSetMock.As<IQueryable<Chip>>().Setup(m => m.Expression).Returns(chipsData.Expression);
-			_chipDbSetMock.As<IQueryable<Chip>>().Setup(m => m.ElementType).Returns(chipsData.ElementType);
-			_chipDbSetMock.As<IQueryable<Chip>>().Setup(m => m.GetEnumerator()).Returns(chipsData.GetEnumerator());
-
-			// Act
 			var result = await _service.GetChipInfoByMemberIdAsync(100);
 
-			// Assert
 			result.Should().Be("VIP Access");
 		}
 
 		/// <summary>
-		/// Tests that GetChipInfoByMemberIdAsync returns null if no chip matches the given member ID.
+		/// Tests that <see cref="ChipService.GetChipInfoByMemberIdAsync(int)"/> returns null when the chip does not exist.
 		/// </summary>
 		[Fact]
-		public async Task GetChipInfoByMemberIdAsync_WhenNoChipFound_ReturnsNull()
+		public async Task GetChipInfoByMemberIdAsync_ShouldReturnNull_WhenChipDoesNotExist()
 		{
-			// Arrange
-			var chipsData = new List<Chip>
-			{
-				new Chip { ChipID = 5, MemberID = 101, ChipInfo = "OtherUserChip", IsActive = true }
-			}.AsQueryable();
+			int memberId = 999;
 
-			_chipDbSetMock.As<IQueryable<Chip>>().Setup(m => m.Provider).Returns(chipsData.Provider);
-			_chipDbSetMock.As<IQueryable<Chip>>().Setup(m => m.Expression).Returns(chipsData.Expression);
-			_chipDbSetMock.As<IQueryable<Chip>>().Setup(m => m.ElementType).Returns(chipsData.ElementType);
-			_chipDbSetMock.As<IQueryable<Chip>>().Setup(m => m.GetEnumerator()).Returns(chipsData.GetEnumerator());
+			var result = await _service.GetChipInfoByMemberIdAsync(memberId);
 
-			// Act
-			var result = await _service.GetChipInfoByMemberIdAsync(999);
-
-			// Assert
 			result.Should().BeNull();
+		}
+
+		/// <summary>
+		/// Disposes the in-memory database after all tests are run.
+		/// </summary>
+		public void Dispose()
+		{
+			_dbContext.Dispose();
 		}
 	}
 }

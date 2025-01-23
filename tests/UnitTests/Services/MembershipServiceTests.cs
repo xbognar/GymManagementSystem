@@ -1,274 +1,211 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using Xunit;
 using FluentAssertions;
-using Moq;
 using Microsoft.EntityFrameworkCore;
 using GymDBAccess.DataAccess;
 using GymDBAccess.Models;
 using GymDBAccess.Services;
-using GymDBAccess.Services.Interfaces;
 using GymDBAccess.DTOs;
 
 namespace UnitTests.Services
 {
-	public class MembershipServiceTests
+	/// <summary>
+	/// Unit tests for the <see cref="MembershipService"/> class, ensuring correct behavior of membership-related operations.
+	/// </summary>
+	public class MembershipServiceTests : IDisposable
 	{
-		private readonly Mock<ApplicationDbContext> _dbContextMock;
-		private readonly Mock<DbSet<Membership>> _membershipDbSetMock;
-		private readonly Mock<DbSet<Member>> _memberDbSetMock;
+		private readonly ApplicationDbContext _dbContext;
 		private readonly MembershipService _service;
+		private readonly string _databaseName;
 
+		/// <summary>
+		/// Initializes a new instance of the <see cref="MembershipServiceTests"/> class.
+		/// Sets up the in-memory database and seeds initial data.
+		/// </summary>
 		public MembershipServiceTests()
 		{
-			var options = new DbContextOptions<ApplicationDbContext>();
-			_dbContextMock = new Mock<ApplicationDbContext>(options);
+			_databaseName = Guid.NewGuid().ToString();
 
-			_membershipDbSetMock = new Mock<DbSet<Membership>>();
-			_dbContextMock.Setup(db => db.Memberships).Returns(_membershipDbSetMock.Object);
+			var options = new DbContextOptionsBuilder<ApplicationDbContext>()
+				.UseInMemoryDatabase(databaseName: _databaseName)
+				.Options;
 
-			_memberDbSetMock = new Mock<DbSet<Member>>();
-			_dbContextMock.Setup(db => db.Members).Returns(_memberDbSetMock.Object);
+			_dbContext = new ApplicationDbContext(options);
 
-			_service = new MembershipService(_dbContextMock.Object);
+			_dbContext.Memberships.AddRange(new List<Membership>
+			{
+				new Membership { MembershipID = 1, MemberID = 10, PaymentType = "Monthly", IsActive = true },
+				new Membership { MembershipID = 2, MemberID = 11, PaymentType = "Annual", IsActive = false }
+			});
+
+			_dbContext.Members.AddRange(new List<Member>
+			{
+				new Member { MemberID = 10, FirstName = "Alice", LastName = "Smith" },
+				new Member { MemberID = 11, FirstName = "John", LastName = "Doe" }
+			});
+
+			_dbContext.SaveChanges();
+
+			_service = new MembershipService(_dbContext);
 		}
 
 		/// <summary>
-		/// Tests that GetMembershipByIdAsync returns the membership if found.
+		/// Tests that <see cref="MembershipService.GetMembershipByIdAsync(int)"/> returns the membership when it exists.
 		/// </summary>
 		[Fact]
-		public async Task GetMembershipByIdAsync_WhenFound_ReturnsMembership()
+		public async Task GetMembershipByIdAsync_ShouldReturnMembership_WhenExists()
 		{
-			// Arrange
-			var testMembership = new Membership { MembershipID = 1, MemberID = 10 };
-			_dbContextMock.Setup(db => db.Memberships.FindAsync(1)).ReturnsAsync(testMembership);
+			int membershipId = 1;
 
-			// Act
-			var result = await _service.GetMembershipByIdAsync(1);
+			var result = await _service.GetMembershipByIdAsync(membershipId);
 
-			// Assert
 			result.Should().NotBeNull();
-			result.MembershipID.Should().Be(1);
+			result.MembershipID.Should().Be(membershipId);
 			result.MemberID.Should().Be(10);
 		}
 
 		/// <summary>
-		/// Tests that GetMembershipByIdAsync returns null if the membership is not found.
+		/// Tests that <see cref="MembershipService.GetMembershipByIdAsync(int)"/> returns null when the membership does not exist.
 		/// </summary>
 		[Fact]
-		public async Task GetMembershipByIdAsync_WhenNotFound_ReturnsNull()
+		public async Task GetMembershipByIdAsync_ShouldReturnNull_WhenNotExists()
 		{
-			// Arrange
-			_dbContextMock.Setup(db => db.Memberships.FindAsync(999)).ReturnsAsync((Membership)null);
+			int membershipId = 999;
 
-			// Act
-			var result = await _service.GetMembershipByIdAsync(999);
+			var result = await _service.GetMembershipByIdAsync(membershipId);
 
-			// Assert
 			result.Should().BeNull();
 		}
 
 		/// <summary>
-		/// Tests that GetAllMembershipsAsync returns all memberships in the DbSet.
+		/// Tests that <see cref="MembershipService.GetAllMembershipsAsync"/> returns all memberships.
 		/// </summary>
 		[Fact]
-		public async Task GetAllMembershipsAsync_ReturnsAll()
+		public async Task GetAllMembershipsAsync_ShouldReturnAllMemberships()
 		{
-			// Arrange
-			var membershipsData = new List<Membership>
-			{
-				new Membership { MembershipID = 1 },
-				new Membership { MembershipID = 2 }
-			}.AsQueryable();
-
-			_membershipDbSetMock.As<IQueryable<Membership>>().Setup(m => m.Provider).Returns(membershipsData.Provider);
-			_membershipDbSetMock.As<IQueryable<Membership>>().Setup(m => m.Expression).Returns(membershipsData.Expression);
-			_membershipDbSetMock.As<IQueryable<Membership>>().Setup(m => m.ElementType).Returns(membershipsData.ElementType);
-			_membershipDbSetMock.As<IQueryable<Membership>>().Setup(m => m.GetEnumerator()).Returns(membershipsData.GetEnumerator());
-
-			// Act
 			var result = await _service.GetAllMembershipsAsync();
 
-			// Assert
 			result.Should().HaveCount(2);
+			result.Should().Contain(m => m.MembershipID == 1);
+			result.Should().Contain(m => m.MembershipID == 2);
 		}
 
 		/// <summary>
-		/// Tests that AddMembershipAsync adds a new membership and saves changes.
+		/// Tests that <see cref="MembershipService.AddMembershipAsync(Membership)"/> adds a new membership and saves changes.
 		/// </summary>
 		[Fact]
-		public async Task AddMembershipAsync_AddsAndSaves()
+		public async Task AddMembershipAsync_ShouldAddMembership_AndSaveChanges()
 		{
-			// Arrange
-			var newMembership = new Membership { MembershipID = 10 };
+			var newMembership = new Membership { MembershipID = 10, MemberID = 100, PaymentType = "Monthly", IsActive = true };
 
-			// Act
 			await _service.AddMembershipAsync(newMembership);
 
-			// Assert
-			_dbContextMock.Verify(db => db.Memberships.AddAsync(newMembership, default), Times.Once);
-			_dbContextMock.Verify(db => db.SaveChangesAsync(default), Times.Once);
+			var membershipInDb = await _dbContext.Memberships.FindAsync(newMembership.MembershipID);
+			membershipInDb.Should().NotBeNull();
+			membershipInDb.PaymentType.Should().Be("Monthly");
+			membershipInDb.IsActive.Should().BeTrue();
 		}
 
 		/// <summary>
-		/// Tests that UpdateMembershipAsync updates the membership and saves changes.
+		/// Tests that <see cref="MembershipService.UpdateMembershipAsync(Membership)"/> updates an existing membership and saves changes.
 		/// </summary>
 		[Fact]
-		public async Task UpdateMembershipAsync_UpdatesAndSaves()
+		public async Task UpdateMembershipAsync_ShouldUpdateMembership_AndSaveChanges()
 		{
-			// Arrange
-			var existingMembership = new Membership { MembershipID = 5 };
+			var existingMembership = await _dbContext.Memberships.FindAsync(1);
+			existingMembership.PaymentType = "Weekly";
 
-			// Act
 			await _service.UpdateMembershipAsync(existingMembership);
 
-			// Assert
-			_dbContextMock.Verify(db => db.Memberships.Update(existingMembership), Times.Once);
-			_dbContextMock.Verify(db => db.SaveChangesAsync(default), Times.Once);
+			var membershipInDb = await _dbContext.Memberships.FindAsync(existingMembership.MembershipID);
+			membershipInDb.PaymentType.Should().Be("Weekly");
 		}
 
 		/// <summary>
-		/// Tests that DeleteMembershipAsnyc removes the membership if found.
+		/// Tests that <see cref="MembershipService.DeleteMembershipAsync(int)"/> removes the membership when it exists and saves changes.
 		/// </summary>
 		[Fact]
-		public async Task DeleteMembershipAsnyc_WhenFound_DeletesAndSaves()
+		public async Task DeleteMembershipAsync_ShouldRemoveMembership_AndSaveChanges_WhenExists()
 		{
-			// Arrange
-			var existingMembership = new Membership { MembershipID = 7 };
-			_dbContextMock.Setup(db => db.Memberships.FindAsync(7)).ReturnsAsync(existingMembership);
+			int membershipId = 2;
 
-			// Act
-			await _service.DeleteMembershipAsnyc(7);
+			await _service.DeleteMembershipAsnyc(membershipId);
 
-			// Assert
-			_dbContextMock.Verify(db => db.Memberships.Remove(existingMembership), Times.Once);
-			_dbContextMock.Verify(db => db.SaveChangesAsync(default), Times.Once);
+			var membershipInDb = await _dbContext.Memberships.FindAsync(membershipId);
+			membershipInDb.Should().BeNull();
 		}
 
 		/// <summary>
-		/// Tests that DeleteMembershipAsnyc does nothing if the membership is not found.
+		/// Tests that <see cref="MembershipService.DeleteMembershipAsync(int)"/> does nothing when the membership does not exist.
 		/// </summary>
 		[Fact]
-		public async Task DeleteMembershipAsnyc_WhenNotFound_DoesNothing()
+		public async Task DeleteMembershipAsync_ShouldDoNothing_WhenNotExists()
 		{
-			// Arrange
-			_dbContextMock.Setup(db => db.Memberships.FindAsync(999)).ReturnsAsync((Membership)null);
+			int membershipId = 999;
 
-			// Act
-			await _service.DeleteMembershipAsnyc(999);
+			await _service.DeleteMembershipAsnyc(membershipId);
 
-			// Assert
-			_dbContextMock.Verify(db => db.Memberships.Remove(It.IsAny<Membership>()), Times.Never);
-			_dbContextMock.Verify(db => db.SaveChangesAsync(default), Times.Never);
+			var membershipInDb = await _dbContext.Memberships.FindAsync(membershipId);
+			membershipInDb.Should().BeNull();
 		}
 
 		/// <summary>
-		/// Tests that GetActiveMembershipsAsync returns only memberships marked as active, joined with Member info.
+		/// Tests that <see cref="MembershipService.GetActiveMembershipsAsync"/> returns only active memberships with member information.
 		/// </summary>
 		[Fact]
-		public async Task GetActiveMembershipsAsync_ReturnsActiveList()
+		public async Task GetActiveMembershipsAsync_ShouldReturnActiveMemberships_WithMemberInfo()
 		{
-			// Arrange
-			var membershipData = new List<Membership>
-			{
-				new Membership { MembershipID = 1, MemberID = 10, IsActive = true, PaymentType = "Monthly" },
-				new Membership { MembershipID = 2, MemberID = 11, IsActive = false }
-			}.AsQueryable();
-
-			_membershipDbSetMock.As<IQueryable<Membership>>().Setup(m => m.Provider).Returns(membershipData.Provider);
-			_membershipDbSetMock.As<IQueryable<Membership>>().Setup(m => m.Expression).Returns(membershipData.Expression);
-			_membershipDbSetMock.As<IQueryable<Membership>>().Setup(m => m.ElementType).Returns(membershipData.ElementType);
-			_membershipDbSetMock.As<IQueryable<Membership>>().Setup(m => m.GetEnumerator()).Returns(membershipData.GetEnumerator());
-
-			var memberData = new List<Member>
-			{
-				new Member { MemberID = 10, FirstName = "Alice", LastName = "Smith" },
-				new Member { MemberID = 11, FirstName = "John", LastName = "Doe" }
-			}.AsQueryable();
-
-			var memberDbSetMock = new Mock<DbSet<Member>>();
-			memberDbSetMock.As<IQueryable<Member>>().Setup(m => m.Provider).Returns(memberData.Provider);
-			memberDbSetMock.As<IQueryable<Member>>().Setup(m => m.Expression).Returns(memberData.Expression);
-			memberDbSetMock.As<IQueryable<Member>>().Setup(m => m.ElementType).Returns(memberData.ElementType);
-			memberDbSetMock.As<IQueryable<Member>>().Setup(m => m.GetEnumerator()).Returns(memberData.GetEnumerator());
-
-			_dbContextMock.Setup(db => db.Members).Returns(memberDbSetMock.Object);
-
-			// Act
 			var result = await _service.GetActiveMembershipsAsync();
 
-			// Assert
 			result.Should().HaveCount(1);
-			result.First().MembershipID.Should().Be(1);
-			result.First().MemberName.Should().Be("Alice Smith");
-			result.First().Type.Should().Be("Monthly");
+			var activeMembership = result.First();
+			activeMembership.MembershipID.Should().Be(1);
+			activeMembership.MemberName.Should().Be("Alice Smith");
+			activeMembership.Type.Should().Be("Monthly");
 		}
 
 		/// <summary>
-		/// Tests that GetInactiveMembershipsAsync returns only memberships marked as inactive, joined with Member info.
+		/// Tests that <see cref="MembershipService.GetInactiveMembershipsAsync"/> returns only inactive memberships with member information.
 		/// </summary>
 		[Fact]
-		public async Task GetInactiveMembershipsAsync_ReturnsInactiveList()
+		public async Task GetInactiveMembershipsAsync_ShouldReturnInactiveMemberships_WithMemberInfo()
 		{
-			// Arrange
-			var membershipData = new List<Membership>
-			{
-				new Membership { MembershipID = 1, MemberID = 10, IsActive = true },
-				new Membership { MembershipID = 2, MemberID = 11, IsActive = false, PaymentType = "One-time" }
-			}.AsQueryable();
-
-			_membershipDbSetMock.As<IQueryable<Membership>>().Setup(m => m.Provider).Returns(membershipData.Provider);
-			_membershipDbSetMock.As<IQueryable<Membership>>().Setup(m => m.Expression).Returns(membershipData.Expression);
-			_membershipDbSetMock.As<IQueryable<Membership>>().Setup(m => m.ElementType).Returns(membershipData.ElementType);
-			_membershipDbSetMock.As<IQueryable<Membership>>().Setup(m => m.GetEnumerator()).Returns(membershipData.GetEnumerator());
-
-			var memberData = new List<Member>
-			{
-				new Member { MemberID = 10, FirstName = "Alice", LastName = "Smith" },
-				new Member { MemberID = 11, FirstName = "John", LastName = "Doe" }
-			}.AsQueryable();
-
-			_memberDbSetMock.As<IQueryable<Member>>().Setup(m => m.Provider).Returns(memberData.Provider);
-			_memberDbSetMock.As<IQueryable<Member>>().Setup(m => m.Expression).Returns(memberData.Expression);
-			_memberDbSetMock.As<IQueryable<Member>>().Setup(m => m.ElementType).Returns(memberData.ElementType);
-			_memberDbSetMock.As<IQueryable<Member>>().Setup(m => m.GetEnumerator()).Returns(memberData.GetEnumerator());
-
-			// Act
 			var result = await _service.GetInactiveMembershipsAsync();
 
-			// Assert
 			result.Should().HaveCount(1);
-			result.First().MembershipID.Should().Be(2);
-			result.First().MemberName.Should().Be("John Doe");
+			var inactiveMembership = result.First();
+			inactiveMembership.MembershipID.Should().Be(2);
+			inactiveMembership.MemberName.Should().Be("John Doe");
+			inactiveMembership.Type.Should().Be("Annual");
 		}
 
 		/// <summary>
-		/// Tests that GetUserMembershipsAsync returns memberships for a specific member.
+		/// Tests that <see cref="MembershipService.GetUserMembershipsAsync(int)"/> returns memberships for a specific member.
 		/// </summary>
 		[Fact]
-		public async Task GetUserMembershipsAsync_ReturnsUserMemberships()
+		public async Task GetUserMembershipsAsync_ShouldReturnMemberships_ForSpecificMember()
 		{
-			// Arrange
-			var membershipData = new List<Membership>
-			{
-				new Membership { MembershipID = 10, MemberID = 100, PaymentType = "Monthly" },
-				new Membership { MembershipID = 11, MemberID = 101, PaymentType = "One-time" },
-				new Membership { MembershipID = 12, MemberID = 100, PaymentType = "Annual" }
-			}.AsQueryable();
+			var newMembership1 = new Membership { MembershipID = 10, MemberID = 100, PaymentType = "Monthly", IsActive = true };
+			var newMembership2 = new Membership { MembershipID = 11, MemberID = 100, PaymentType = "Annual", IsActive = false };
+			_dbContext.Memberships.AddRange(newMembership1, newMembership2);
+			await _dbContext.SaveChangesAsync();
 
-			_membershipDbSetMock.As<IQueryable<Membership>>().Setup(m => m.Provider).Returns(membershipData.Provider);
-			_membershipDbSetMock.As<IQueryable<Membership>>().Setup(m => m.Expression).Returns(membershipData.Expression);
-			_membershipDbSetMock.As<IQueryable<Membership>>().Setup(m => m.ElementType).Returns(membershipData.ElementType);
-			_membershipDbSetMock.As<IQueryable<Membership>>().Setup(m => m.GetEnumerator()).Returns(membershipData.GetEnumerator());
-
-			// Act
 			var result = await _service.GetUserMembershipsAsync(100);
 
-			// Assert
 			result.Should().HaveCount(2);
-			result.First().PaymentType.Should().Be("Monthly");
-			result.Last().PaymentType.Should().Be("Annual");
+			result.Should().Contain(m => m.MembershipID == 10 && m.PaymentType == "Monthly");
+			result.Should().Contain(m => m.MembershipID == 11 && m.PaymentType == "Annual");
+		}
+
+		/// <summary>
+		/// Disposes the in-memory database after all tests are run.
+		/// </summary>
+		public void Dispose()
+		{
+			_dbContext.Dispose();
 		}
 	}
 }

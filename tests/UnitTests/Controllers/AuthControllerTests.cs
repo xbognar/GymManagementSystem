@@ -6,10 +6,12 @@ using Microsoft.Extensions.Configuration;
 using GymAPI.Controllers;
 using GymDBAccess.Models;
 using GymDBAccess.Services.Interfaces;
-using System;
 
 namespace UnitTests.Controllers
 {
+	/// <summary>
+	/// Unit tests for the AuthController.
+	/// </summary>
 	public class AuthControllerTests
 	{
 		private readonly Mock<IJwtService> _jwtServiceMock;
@@ -21,7 +23,7 @@ namespace UnitTests.Controllers
 			_jwtServiceMock = new Mock<IJwtService>();
 			_configurationMock = new Mock<IConfiguration>();
 
-			// You might set environment variables or mock them here:
+			// Setting environment variables for testing
 			Environment.SetEnvironmentVariable("LOGIN_USERNAME", "testUser");
 			Environment.SetEnvironmentVariable("LOGIN_PASSWORD", "testPass");
 
@@ -37,24 +39,25 @@ namespace UnitTests.Controllers
 			// Arrange
 			var loginModel = new LoginModel
 			{
-				Username = "testUser", // Matches environment variable
+				Username = "testUser",
 				Password = "testPass"
 			};
 
+			var expectedToken = "fake_jwt_token";
 			_jwtServiceMock.Setup(s => s.GenerateJwtToken("testUser"))
-						   .Returns("fake_jwt_token");
+						   .Returns(expectedToken);
 
 			// Act
 			var result = _controller.Login(loginModel) as OkObjectResult;
 
 			// Assert
 			result.Should().NotBeNull();
-			var tokenObject = result.Value as dynamic;
-			tokenObject.Token.Should().Be("fake_jwt_token");
+			result.StatusCode.Should().Be(200);
+			result.Value.Should().BeEquivalentTo(new { Token = expectedToken });
 		}
 
 		/// <summary>
-		/// Tests that invalid credentials return Unauthorized.
+		/// Tests that invalid credentials return Unauthorized with "Invalid credentials".
 		/// </summary>
 		[Fact]
 		public void Login_InvalidCredentials_ReturnsUnauthorized()
@@ -66,11 +69,16 @@ namespace UnitTests.Controllers
 				Password = "wrongPass"
 			};
 
+			_jwtServiceMock.Setup(s => s.GenerateJwtToken(It.IsAny<string>()))
+						   .Returns((string)null);
+
 			// Act
 			var result = _controller.Login(loginModel);
 
 			// Assert
-			var unauthorizedResult = Assert.IsType<UnauthorizedObjectResult>(result);
+			var unauthorizedResult = result as UnauthorizedObjectResult;
+			unauthorizedResult.Should().NotBeNull();
+			unauthorizedResult.StatusCode.Should().Be(401);
 			unauthorizedResult.Value.Should().Be("Invalid credentials");
 		}
 	}
