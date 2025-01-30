@@ -10,7 +10,6 @@ namespace GymDBAccess.DataAccess
 		{
 		}
 
-		// Make DbSet<T> properties virtual for Moq
 		public virtual DbSet<Member> Members { get; set; }
 		
 		public virtual DbSet<Membership> Memberships { get; set; }

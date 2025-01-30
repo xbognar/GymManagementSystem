@@ -12,37 +12,39 @@ namespace GymAPI
 	{
 		public static void Main(string[] args)
 		{
-			// Create builder
 			var builder = WebApplication.CreateBuilder(args);
 
-			// If in "IntegrationTest" environment, use a UNIQUE InMemory DB name
 			if (builder.Environment.IsEnvironment("IntegrationTest"))
 			{
+				// 1. Use InMemory DB for integration tests
+				// 2. Do NOT run migrations in this scenario
 				var uniqueDbName = $"GymIntegrationTestDB_{Guid.NewGuid()}";
-				builder.Services.AddDbContext<ApplicationDbContext>(options =>
-					options.UseInMemoryDatabase(uniqueDbName));
+				builder.Services.AddDbContext<ApplicationDbContext>(opts =>
+					opts.UseInMemoryDatabase(uniqueDbName));
 			}
 			else
 			{
-				// Use real DB
-				var connectionString = Environment.GetEnvironmentVariable("CONNECTION_STRING")
-									   ?? "FallbackOrThrow";
-				builder.Services.AddDbContext<ApplicationDbContext>(options =>
-					options.UseSqlServer(connectionString));
+				// Use the real DB in any other environment
+				var connectionString =
+					Environment.GetEnvironmentVariable("CONNECTION_STRING")
+					?? throw new InvalidOperationException("Missing CONNECTION_STRING env variable.");
+
+				builder.Services.AddDbContext<ApplicationDbContext>(opts =>
+					opts.UseSqlServer(connectionString));
 			}
 
-			// Add Controllers & other services
+			// Add other services
 			builder.Services.AddControllers();
 			builder.Services.AddEndpointsApiExplorer();
 			builder.Services.AddSwaggerGen();
 
-			// Add your usual DI for services
+			// Add DI for your custom services
 			builder.Services.AddScoped<IMemberService, MemberService>();
 			builder.Services.AddScoped<IMembershipService, MembershipService>();
 			builder.Services.AddScoped<IChipService, ChipService>();
 
 			// JWT setup
-			string jwtKey = Environment.GetEnvironmentVariable("JWT_KEY") ?? "TestFallbackJwtKey_ChangeMe";
+			var jwtKey = Environment.GetEnvironmentVariable("JWT_KEY") ?? "TestFallbackJwtKey_ChangeMe";
 			var keyBytes = Encoding.ASCII.GetBytes(jwtKey);
 
 			builder.Services.AddAuthentication(opts =>
@@ -63,12 +65,12 @@ namespace GymAPI
 				};
 			});
 
+			// Register your JwtService as a Singleton
 			builder.Services.AddSingleton<IJwtService, JwtService>();
 
-			// Build app
 			var app = builder.Build();
 
-			// If not in IntegrationTest, do DB migrate
+			// Auto-migrate if NOT "IntegrationTest"
 			if (!app.Environment.IsEnvironment("IntegrationTest"))
 			{
 				using var scope = app.Services.CreateScope();
@@ -83,6 +85,7 @@ namespace GymAPI
 			}
 
 			app.UseHttpsRedirection();
+
 			app.UseAuthentication();
 			app.UseAuthorization();
 
